@@ -1,0 +1,8 @@
+[project]
+name = "exportador"
+version = "0.1.0"
+description = "Microapp para exportar querys SQLite para Excel, TSV e Markdown"
+requires-python = "==3.12.*"
+dependencies = [
+    "openpyxl>=3.1.2",
+]

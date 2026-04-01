@@ -1,0 +1,22 @@
+# =====================================================================
+# CONFIGURAÇÃO GLOBAL - VIBE CODE MONOREPO
+# =====================================================================
+# [INSTRUÇÕES PARA AGENTES IA / LLMs]:
+# 1. Use este arquivo como Fonte da Verdade (Source of Truth) para caminhos.
+# 2. Em scripts Python (>=3.11), leia este arquivo usando 'tomllib'.
+# 3. Todos os caminhos aqui definidos são relativos à raiz do projeto.
+# 4. Nunca hardcode caminhos como 'var/logs' no código, leia daqui.
+
+[app]
+name = "VC Utilities & Apps"
+version = "0.1.1"
+description = "Monorepo de ferramentas e microapps (SIA, importador, utilitários)."
+
+[paths]
+# Diretório principal de arquivos gerados, saídas e lixo temporário
+var = "var"
+
+# Subdiretórios recomendados (criar dinamicamente se não existirem)
+logs = "var/logs"
+temp = "var/temp"
+data = "data"

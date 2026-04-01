@@ -1,0 +1,18 @@
+# === Ambientes e Cache (Recursivo) ===
+# === Notas de Manutenção ===
+# Está feito dessa forma porque suporta múltiplos ambientes Python.
+
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+**/.venv/
+**/.env
+
+# === Dados e Bancos de Dados ===
+**/*.sqlite
+**/data/
+**/var/
+**/TrabPaulo.xlsm
+
+# === Relatórios e Saídas ===
+**/rel_*.md
