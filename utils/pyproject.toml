@@ -1,0 +1,6 @@
+[project]
+name = "paulo-utils"
+version = "0.1.0"
+description = "Utilitários de suporte para projetos Vibe Code"
+requires-python = "==3.12.*"
+dependencies = []

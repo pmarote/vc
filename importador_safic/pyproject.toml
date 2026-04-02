@@ -1,0 +1,8 @@
+[project]
+name = "importador_safic"
+version = "0.1.1"
+description = "Extrator e consolidador de dados do SAFIC (MDF -> SQLite)"
+requires-python = ">=3.10"
+dependencies = [
+    "pywin32",
+]
