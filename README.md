@@ -11,7 +11,7 @@ cd importador_safic
 uv sync
 ```
 
-Historicamente, o projeto **VC** é uma suíte de ferramentas de auditoria fiscal e processamento de dados estruturada como um monorepo de microapps. Este projeto evoluiu de scripts isolados (anteriormente sob os nomes **SIA** e **sfia**) para uma arquitetura organizada onde cada utilitário possui seu próprio ambiente isolado, mas compartilha uma configuração global.
+Historicamente, o projeto **VC** é uma suíte de ferramentas de auditoria fiscal e processamento de dados estruturada como um monorepo de microapps. Este projeto evoluiu de scripts isolados (anteriormente sob os nomes **SIA** e **sfia**) para uma arquitetura organizada onde cada utilitário possui seu próprio ambiente isolado, mas compartilha vizinhanças.
 
 O isolamento de microapps é usado basicamente para economizar tokens e focar em cada uma das funcionalidades de forma objetiva.
 
@@ -43,19 +43,17 @@ Este repositório está estruturado como um conjunto de **projetos independentes
 
 ```text
 vc/
-├── config.toml           # Configurações globais (Caminhos, Versão)
-├── terminal.bat          # Porta de entrada (Atalhos e Ambiente)
-├── .gitignore            # Regras de exclusão globais
-├── data/                 # Bases de dados brutas (Excel/SQLite)
-├── var/                  # Saídas (Logs, Temp, Relatórios MD/HTML)
-│   ├── logs/
-│   └── temp/
-├── exportador/           # Microapp: SQL -> Excel/MD/TSV
-├── importador_safic/     # Microapp: SQL Server -> SQLite
-├── sfia_credAcCust/      # Microapp: e-CredAc Custeio (BI -> SQLite)
-├── sfia_safic/           # Microapp: Auditoria SAFIC (OSF -> SIA)
-├── utils/                # Microapp: Toolkit (Dump, SQLite2MD, MD2HTML)
-└── modelo/               # Template genérico para novos microapps
+├── CHANGELOG.md        # Histórico de versões
+├── README.md           # Este ficheiro
+├── terminal.bat        # Entrypoint interativo e doskeys do ambiente Windows
+├── sfia_safic/         # [Microapp] Automação e relatórios de auditoria SAFIC (->OSF SAFIC->SIA/sfia.sqlite)
+├── sfia_credAcCust/    # [Microapp] Automação e relatórios e-CredAc Custeio (->PowerBI->SQLite)
+├── importador_safic/   # [Microapp] ETL (MDF/SQL Server -> SQLite OSF) 
+├── exportador/         # [Microapp] Utilitário flexível de extração (SQL -> Excel/MD/TSV)
+├── utils/              # [Microapp] Ferramentas de suporte (Dumper, MD2HTML, Reader)
+└── var/                # (Pasta Ignorada) Log, temporários e arquivos diversos
+    ├── logs/
+    └── temp/
 ```
 
 ---
@@ -73,27 +71,27 @@ O arquivo `terminal.bat` na raiz configura o ambiente UTF-8 e define atalhos (**
 ### Configuração Global
 * Cada pasta tem seu microapp, isolado.
 * Os dados da auditoria ficam em pastas externas, ligadas ao trabalho de auditoria.
-* As variáveis dos microapps, onde necessárias, ficam centralizadas `var`, que tem as subpastas `logs` e `data`
+* As variáveis dos microapps, onde necessárias, ficam centralizadas na raiz, pasta `var`, que tem as subpastas `logs` e `tmp`
 
 ---
 
-## 📦 Microapps Principais
+## 🛠️ Microapps (Ecossistema)
 
-### 1. [sfia_credAcCust] - e-CredAc Custeio
-Especializado em processar planilhas de Business Intelligence para auditoria de custeio:
-* **build**: Ingestão de planilhas como *Movimentação*, *Tabelas Gerais* e *Lançamentos Complementares* em um banco SQLite (`siaCredAc.sqlite`).
-* **report**: Gera relatórios de amostragem, listagens completas e **Confrontos** (GIA vs Custeio por Mês/CFOP).
+### 1. [importador_safic] - O Motor de Ingestão
+Ferramenta para converter bancos brutos do SQL Server (`.mdf`) ou arquivos pesados de texto em bancos SQLite (`osf*.sqlite`) padronizados para o motor do VC.
 
-### 2. [sfia_safic] - Auditoria Fiscal
-O motor original de auditoria:
+### 2. [sfia_safic] & [sfia_credAcCust] - Os Auditores
+A inteligência fiscal. Orquestra a execução da auditoria:
 * **build**: Transforma o banco de dados da OSF em um banco SIA enriquecido com Views de inteligência e Índices de aceleração.
-* **report**: Gera relatórios detalhados de inconsistências e análises econômicas.
+* **report**: Gera relatórios detalhados de inconsistências e análises econômicas. Suporta caching físico (`item[osf].sqlite`) para ganho extremo de performance.
+* **Menus Interativos**: Gera arquivos HTML (`menu_relatorios.html`) para anotações locais dinâmicas via `contenteditable`.
 
 ### 3. [utils] - Toolkit de Suporte
 Coleção de utilitários para o dia a dia:
-* [cite_start]**dump_code**: Consolida o código-fonte em um único Markdown para análise de IA[cite: 9].
+* **dump_code**: Consolida o código-fonte em um único Markdown para análise de IA.
 * **sqlite2md**: Gera documentação técnica de qualquer banco SQLite.
 * **md2html**: Converte relatórios Markdown em arquivos HTML *standalone* com CSS embutido.
+* **visualizador_md.html**: Leitor Standalone com interface Drag-and-Drop, otimizado para tabelas Markdown massivas. 
 
 ### 4. [exportador] - Extração Flexível
 Permite extrair resultados de consultas SQL complexas para múltiplos formatos:
@@ -119,4 +117,4 @@ Permite extrair resultados de consultas SQL complexas para múltiplos formatos:
    ```
 
 ---
-**Versão Atual:** Ver CHANGELOG.md | **Filosofia:** Vibe Coding 🌊
+**Versão Atual:** Ver [CHANGELOG.md](CHANGELOG.md) | **Filosofia:** Vibe Coding 🌊

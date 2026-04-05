@@ -8,6 +8,7 @@ doskey vc=uv run --directory %~dp0$*
 doskey vcdump=uv run --directory %~dp0utils main.py dump $*
 doskey sqlite2md=uv run --directory %~dp0utils main.py sqlite2md $*
 doskey exp=uv run --directory %~dp0exportador main.py $*
+doskey vcmd=start "" "%~dp0utils\visualizador_md.html"
 
 echo ============================================================
 echo          🚀 AMBIENTE VIBE CODE INICIADO
@@ -28,6 +29,8 @@ echo   vc utils main.py dump --root ../projeto_alvo --dst ../var
 echo   vc utils main.py sqlite2md --src ../data/seu_banco.sqlite --dst ../var/relatorio_banco.md
 echo.
 echo Demais atalhos configurados para os utilitarios:
+echo.
+echo   vcmd        -^> Abre o Visualizador Interativo de arquivos .md e SKILLS
 echo.
 echo   vcdump      -^> Gera o consolidado (Markdown) do projeto
 echo                 Uso: vcdump --root sfia_safic

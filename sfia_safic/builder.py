@@ -139,7 +139,7 @@ def construir_banco_sia(db_osf, db_sia, excel_file):
         CASE WHEN A.codSit = 3 THEN 'cancelado' ELSE
           CASE WHEN A.codSit = 4 THEN 'denegado' ELSE
             CASE WHEN A.codSit = 5 THEN 'inutilizado' ELSE
-              CASE WHEN A.codSit = 8 THEN 'norma espec(8)' ELSE 'válido' END
+              CASE WHEN A.codSit = 8 THEN 'válido' ELSE 'válido' END
             END
           END
         END

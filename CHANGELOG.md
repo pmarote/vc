@@ -2,8 +2,23 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
-## [0.4.3] - 2026-04
+## [0.4.4] - 2026-04
 - versão em desenvolvimento
+
+## [0.4.3] - 2026-04-05
+
+### Arquitetura de Dados e Performance
+- **Caching Definitivo (Data Marts):** Implementação de banco de aceleração dedicado (`item[osf].sqlite`) no `report_item`, utilizando a estratégia de ETL em estágios (Extração em Memória RAM via `PRAGMA temp_store` -> Agrupamento -> Carga) para processamento de milhões de linhas de forma instantânea.
+- **Window Functions Analíticas:** Adoção massiva de `ROW_NUMBER() OVER()` para rankeamento dinâmico (Top 20 vs Demais Itens) e cálculos de porcentagens relativas (`pct`) diretamente no SQL, eliminando subconsultas custosas em `an_econ.py` e `item.py`.
+
+### UI/UX e Ferramentas do Auditor
+- **Caderno de Notas Interativo:** Criação do `menu_relatorios.html`, atuando como um *hub* local com atributos `contenteditable="true"` para que o auditor faça anotações e salve localmente (`Ctrl+S`).
+- **VC Reader:** Lançamento de um visualizador de Markdown Standalone em HTML (`utils/visualizador_md.html`) com suporte a *Drag and Drop*, tabelas otimizadas para finanças e isolamento visual de metadados YAML. Integrado globalmente pelo doskey `vcmd`.
+
+### Refatoração e Correções
+- **Modularização de Reports:** O arquivo gigante `reporter.py` foi fatiado. Cada relatório de auditoria agora é um micro-módulo isolado dentro da pasta `reports/`.
+- **Blindagem Markdown:** Implementação de *escapes* na função `fmt_br` (`to_markdown.py`) substituindo pipes (`|`) por `&#124;` e quebras de linha (`\n`) por `<br>`, impedindo que descrições sujas de NFes quebrem as tabelas do relatório.
+- **Correção da Documentação:** O arquivo `config.toml` foi definitivamente retirado da árvore de diretórios do `README.md`, refletindo a realidade arquitetural da purificação iniciada na v0.4.2.
 
 ## [0.4.2] - 2026-04-02
 

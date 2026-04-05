@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 from builder import construir_banco_sia
 from reporter import gerar_relatorios
+from reporter import gerar_relatorio_operacoes
 
 def main():
     parser = argparse.ArgumentParser(description="Gerador do Banco SIA e Relatórios.")
@@ -15,8 +16,16 @@ def main():
     p_build.add_argument("--excel", default="../sfia_safic/TrabPaulo.xlsm", help="Caminho do ficheiro de CFOPs")
 
     # === Subcomando: report ===
-    p_report = subparsers.add_parser("report", help="Gera os relatórios MD a partir de uma pasta.")
+    p_report = subparsers.add_parser("report", help="Gera os relatórios MD padrão.")
     p_report.add_argument("--dir", required=True, help="Pasta que contém os bancos osf*.sqlite e sia*.sqlite")
+
+    # === NOVO Subcomando: report_oper ===
+    p_oper = subparsers.add_parser("report_oper", help="Gera o relatório de operações (rel_oper.md).")
+    p_oper.add_argument("--dir", required=True, help="Pasta com os bancos de dados")
+
+    # === NOVO Subcomando: report_item ===
+    p_item = subparsers.add_parser("report_item", help="Gera o relatório de itens (rel_item.md) com aceleração via tabela item{osf}.sqlite.")
+    p_item.add_argument("--dir", required=True, help="Pasta com os bancos de dados")
 
     args = parser.parse_args()
 
@@ -33,7 +42,7 @@ def main():
         construir_banco_sia(src_path, out_path, excel_path)
         print("✅ Construção finalizada com sucesso.")
 
-    elif args.command == "report":
+    elif args.command in ["report", "report_oper", "report_item"]:
         target_dir = Path(args.dir).resolve()
         
         if not target_dir.exists():
@@ -49,7 +58,14 @@ def main():
             sys.exit(1)
 
         print(f"📊 Bancos encontrados para relatório:\n ➔ OSF: {db_osf.name}\n ➔ SIA: {db_sia.name}")
-        gerar_relatorios(str(db_osf), str(db_sia), target_dir)
+        if args.command == "report":
+            gerar_relatorios(str(db_osf), str(db_sia), target_dir)
+        elif args.command == "report_oper":
+            from reporter import gerar_relatorio_operacoes
+            gerar_relatorio_operacoes(str(db_osf), str(db_sia), target_dir)
+        elif args.command == "report_item":
+            from reporter import gerar_relatorio_itens
+            gerar_relatorio_itens(str(db_osf), str(db_sia), target_dir)
 
 if __name__ == "__main__":
     main()

@@ -13,13 +13,26 @@ from typing import Any, Optional
 def fmt_br(val: Any) -> str:
     """Formata valores para o padrão brasileiro com suporte a cores HTML para negativos."""
     if val is None: return ""
+    
     if isinstance(val, (float, int)):
         if isinstance(val, float):
             text_val = f"{val:_.2f}".replace('.', ',').replace('_', '.')
         else:
             text_val = str(val)
         return f'<span style="color:red">{text_val}</span>' if val < 0 else text_val
-    return str(val)
+    
+    # Tratamento seguro para strings em tabelas Markdown
+    text_val = str(val)
+    
+    # 1. Substitui o | pelo código HTML para não criar colunas fantasmas
+    if "|" in text_val:
+        text_val = text_val.replace("|", "&#124;")
+        
+    # 2. Substitui quebras de linha por <br> para não criar linhas fantasmas
+    if "\n" in text_val:
+        text_val = text_val.replace("\n", "<br>").replace("\r", "")
+        
+    return text_val
 
 def export_markdown(
     cursor: sqlite3.Cursor, 
