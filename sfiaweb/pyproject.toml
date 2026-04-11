@@ -1,0 +1,9 @@
+[project]
+name = "sfiaweb"
+version = "0.1.0"
+description = "Servidor de Interface e Relatórios VC"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+]

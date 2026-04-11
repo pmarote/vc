@@ -1,0 +1,8 @@
+[project]
+name = "ollama_analyst"
+version = "0.1.0"
+description = "Microapp para análise de relatórios usando Ollama local"
+requires-python = ">=3.11"
+dependencies = [
+    "ollama",
+]

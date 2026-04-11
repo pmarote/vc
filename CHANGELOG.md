@@ -2,8 +2,38 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
-## [0.4.4] - 2026-04
+## [0.4.5] - 2026-04
 - versão em desenvolvimento
+
+## [0.4.4] - 2026-04-11
+
+### Automação e Extração de Dados (Web Scraping)
+- **Lançamento do Extrator AIIM (`utils/aiim.py`):** Novo scraper para automação de leitura de Autos de Infração e Imposição de Multa do portal da SEFAZ.
+  - **Integração Web:** Utiliza `requests` e `BeautifulSoup` para acessar, baixar e fazer o parseamento estruturado do HTML nativo dos extratos de processo.
+  - **Armazenamento Relacional:** Persistência de dados em SQLite (`var/tit_aiims.sqlite`), modelando tabelas independentes e conectadas para a capa do `aiim`, `andamentos` e `decisoes`.
+  - **Gestão de Anexos:** Identificação e download automatizado de arquivos físicos (PDFs) referentes a defesas e decisões, com padronização de nomenclatura.
+  - **CLI:** Suporte a parâmetros de linha de comando (`--inicial`, `--final`, `--pasta`) para processamento em lote de faixas numéricas de autos.
+
+### Nuvem e Sincronização
+- **Lançamento do PMCloud (`utils/pmcloud.py`):** Novo utilitário de terminal para gestão e backup de arquivos de auditoria na nuvem (arquitetura Python + PHP/SQLite).
+  - **Desduplicação Inteligente:** Utiliza SQLite no lado do servidor para garantir que arquivos idênticos nunca sejam armazenados em duplicidade.
+  - **Transporte Otimizado:** Empacotamento efêmero em `.zip` apenas para a transferência de rede, minimizando o tráfego e requisições HTTP.
+  - **Versionamento no Tempo (`-pull`):** Capacidade de restaurar pastas inteiras exatamente como estavam em uma data específica (*Point-in-Time Recovery*).
+  - **Listagem e Resumo (`-ls`):** Consulta do tamanho total ocupado (com cálculo de economia da desduplicação) e histórico de backups por pasta.
+  - **Garbage Collector (`-rm`):** Exclusão segura de histórico na nuvem que remove apenas arquivos físicos "órfãos", preservando dados compartilhados com outros backups e liberando espaço real no servidor.
+
+### Interface e Relatórios Dinâmicos
+- **Lançamento do sfiaweb:** Novo microapp contendo um servidor web local e ultraleve via FastAPI.
+  - **Edição em Tempo Real:** Interface web com layout de dashboard, permitindo a leitura e anotação direta em relatórios Markdown via `contenteditable` com atalho de salvamento (`Ctrl+S`).
+  - **Isolamento de Contexto:** Leitura dinâmica do diretório de auditoria alvo através do arquivo de configuração centralizado `var/config_auditoria.toml`.
+
+### Análise com Inteligência Artificial
+- **Lançamento do ollama_analyst:** Novo microapp dedicado à análise em lote de relatórios utilizando modelos de IA locais (ex: gemma4).
+  - **Processamento em Batch:** Lê automaticamente múltiplos prompts `.md` gerados pelo sistema, envia para a API local do Ollama e salva os insights.
+  - **Gestão de Memória:** Implementação de liberação forçada de VRAM/RAM (`keep_alive=0`) ao final do lote para otimização de recursos da máquina.
+
+### Utilitários de Sistema
+- **Novo Utilitário `scan_pastas.py`:** Ferramenta recursiva na pasta `utils/` para mapear diretórios que excedem um limite configurável (ex: 1GB) e gerar relatórios em Markdown, auxiliando na gestão de armazenamento dos drives de auditoria.
 
 ## [0.4.3] - 2026-04-05
 

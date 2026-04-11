@@ -9,6 +9,9 @@ doskey vcdump=uv run --directory %~dp0utils main.py dump $*
 doskey sqlite2md=uv run --directory %~dp0utils main.py sqlite2md $*
 doskey exp=uv run --directory %~dp0exportador main.py $*
 doskey vcmd=start "" "%~dp0utils\visualizador_md.html"
+doskey vm=start "" "%~dp0utils\visualizador_md.html"
+doskey wm=start "" "%~dp0..\usr\WinMerge\WinMergeU.exe"
+doskey dbb=start "" "%~dp0..\usr\DB.Browser.for.SQLite-v3.13.1-win64\DB Browser for SQLite.exe"
 
 echo ============================================================
 echo          🚀 AMBIENTE VIBE CODE INICIADO
@@ -42,6 +45,9 @@ echo.
 echo   exp   -^> Exportaação do módulo exportador/main.py
 echo                 Uso: exp -h
 echo doskey exp=uv run --directory %~dp0exportador main.py $*
+echo.
+echo   wm    -^> usr\WinMerge\WinMergeU.exe
+echo   dbb   -^> usr\DB.Browser.for.SQLite-v3.13.1-win64\DB Browser for SQLite.exe
 echo ============================================================
 echo.
 :: Mantem o prompt de comando aberto

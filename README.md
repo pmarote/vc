@@ -50,8 +50,10 @@ vc/
 ├── sfia_credAcCust/    # [Microapp] Automação e relatórios e-CredAc Custeio (->PowerBI->SQLite)
 ├── importador_safic/   # [Microapp] ETL (MDF/SQL Server -> SQLite OSF) 
 ├── exportador/         # [Microapp] Utilitário flexível de extração (SQL -> Excel/MD/TSV)
-├── utils/              # [Microapp] Ferramentas de suporte (Dumper, MD2HTML, Reader)
-└── var/                # (Pasta Ignorada) Log, temporários e arquivos diversos
+├── sfiaweb/            # [Microapp] Servidor web local (FastAPI) para leitura e anotação em relatórios
+├── ollama_analyst/     # [Microapp] Integração com LLMs locais para análise em lote de auditorias
+├── utils/              # [Microapp] Ferramentas de suporte (Dumper, MD2HTML, Scraper, Gestão de Disco, etc)
+└── var/                # (Pasta Ignorada) Log, config_auditoria.toml, temp e arquivos diversos
     ├── logs/
     └── temp/
 ```
@@ -86,12 +88,25 @@ A inteligência fiscal. Orquestra a execução da auditoria:
 * **report**: Gera relatórios detalhados de inconsistências e análises econômicas. Suporta caching físico (`item[osf].sqlite`) para ganho extremo de performance.
 * **Menus Interativos**: Gera arquivos HTML (`menu_relatorios.html`) para anotações locais dinâmicas via `contenteditable`.
 
-### 3. [utils] - Toolkit de Suporte
+### 3. [sfiaweb] - Interface Dinâmica
+Um servidor FastAPI ultraleve servindo uma interface web moderna:
+* **Leitura Direta**: Consome arquivos .md gerados pelas auditorias diretamente do Drive de trabalho.
+* **Anotações Inteligentes**: Permite edição ao vivo do relatório gerado com auto-salvamento (Ctrl+S).
+
+### 4. [ollama_analyst] - Análise de IA Local
+Microapp dedicado a extrair insights de auditoria usando inteligência artificial:
+* **Vibe Coding Nativo**: Processa lotes de prompts/relatórios enviando para modelos rodando em máquina local (Ollama).
+* **Eficiência**: Realiza o flush automático de memória (RAM/VRAM) após as rotinas pesadas.
+
+### 5. [utils] - Toolkit de Suporte
 Coleção de utilitários para o dia a dia:
 * **dump_code**: Consolida o código-fonte em um único Markdown para análise de IA.
+* **scan_pastas**: Mapeador de consumo de disco, gerando relatórios de diretórios pesados.
 * **sqlite2md**: Gera documentação técnica de qualquer banco SQLite.
 * **md2html**: Converte relatórios Markdown em arquivos HTML *standalone* com CSS embutido.
-* **visualizador_md.html**: Leitor Standalone com interface Drag-and-Drop, otimizado para tabelas Markdown massivas. 
+* **visualizador_md.html**: Leitor Standalone com interface Drag-and-Drop, otimizado para tabelas Markdown massivas.
+* **aiim.py**: Scraper automatizado para extração em lote de Autos de Infração (AIIM) do portal da SEFAZ, com persistência relacional em banco de dados SQLite e download automático de PDFs de decisões.
+* **pmcloud.py**: Sincronizador de arquivos conectado à sua nuvem privada via API PHP. Implementa backups incrementais com versionamento point-in-time, desduplicação inteligente baseada em SQLite e exclusão de arquivos órfãos via Garbage Collector. 
 
 ### 4. [exportador] - Extração Flexível
 Permite extrair resultados de consultas SQL complexas para múltiplos formatos:

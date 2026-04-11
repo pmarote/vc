@@ -1,6 +1,6 @@
 ---
 name: vc
-version: "0.4.3"
+version: "0.4.4"
 type: monorepo
 stack: python, sqlite, uv, markdown, html
 os: windows
