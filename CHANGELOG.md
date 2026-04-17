@@ -2,8 +2,26 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
-## [0.4.5] - 2026-04
+## [0.4.6] - 2026-04
 - versão em desenvolvimento
+
+## [0.4.5] - 2026-04-17
+
+### Arquitetura de Dados e Performance (Data Marts)
+- **Data Mart de Operações (`oper.py`):** Refatoração profunda na geração do relatório de operações. Eliminação de queries repetitivas através da criação dinâmica de um banco SQLite analítico dedicado (`oper_base.sqlite`) diretamente na pasta da auditoria.
+- **Integração de Exportação Direta:** O relatório de operações agora aciona dinamicamente o microapp `exportador` via `sys.path`, gerando automaticamente amostras em `.xlsx` (10k linhas) e a base completa em `.txt` (TSV) lado a lado com os relatórios.
+- **Flattening de Queries:** Achatamento estrutural de blocos `CASE WHEN` complexos em SQL, melhorando a legibilidade e a performance do motor SQLite, com blindagem extra contra divisão por zero (`NULLIF`).
+
+### Relatórios Analíticos (Drill-Down e Top N)
+- **Consolidação de Drill-Down (`safic_menu_det.py`):** Nova arquitetura relacional para detalhamento de notas. O script agora cria uma tabela persistente (`safic_drilldown`) no banco principal.
+- **Lógica de Cauda Longa:** Implementação de limite de faturas (Top 10 por grupo). O sistema utiliza CTEs e Window Functions (`ROW_NUMBER()`) para detalhar as maiores notas e agregar o restante numa linha "DEMAIS NOTAS (SOMA)".
+- **Relacionamento Estrela (Star Schema):** O Excel unificado gerado no final agora se relaciona nativamente com a tabela raiz `chaveNroTudao` via `ZRowId`, permitindo um cruzamento de dados limpo e sem duplicação estrutural.
+- **Ordenação Inteligente:** Implementação de extração numérica *inline* no SQL (`CAST(REPLACE(...))`) para garantir que classificações em texto (ex: `[2]`, `[10]`, `[100]`) sejam ordenadas matematicamente, e não de forma alfabética.
+
+### UI/UX e Utilitários de Terminal
+- **Comando de Limpeza Global (`vcclean`):** Nova rotina inteligente no `terminal.bat` que varre recursivamente todo o monorepo, destruindo pastas `__pycache__`, `.venv` e arquivos `uv.lock` obsoletos, resetando o ambiente de forma rápida sem fechar o terminal.
+- **Quebra de Texto Inteligente:** Expansão da formatação de strings longas (observações e descrições) via SQL nativo, suportando a injeção de `<br>` a cada 30/40 caracteres até o limite de 400 caracteres, finalizando com `(...CORTADO)` para não estourar as tabelas Markdown.
+
 
 ## [0.4.4] - 2026-04-11
 

@@ -1,210 +1,170 @@
-# sfia_safic/reports/item.py
-import sqlite3
-import time
+"""
+Relatório Itens
+"""
+import sys
 from pathlib import Path
 from ._helpers import executar_e_formatar, iniciar_relatorio
 
-def gerar_rel_item(cursor, out_path):
+# --- RESOLUÇÃO DE CAMINHOS PARA O EXPORTADOR ---
+# Sobe 3 níveis: reports -> sfia_safic -> vc
+VC_ROOT = Path(__file__).resolve().parent.parent.parent
+EXPORTADOR_DIR = VC_ROOT / "exportador"
 
-    iniciar_relatorio(out_path, "Relatório de Itens")
+# Adiciona a pasta do exportador ao path do Python para permitir o import
+if str(EXPORTADOR_DIR) not in sys.path:
+    sys.path.insert(0, str(EXPORTADOR_DIR))
 
-    # =========================================================================
-    # 1. AUTODESCOBERTA E ATTACH DO BANCO DE ITENS
-    # =========================================================================
+try:
+    from exporter import export_excel, export_tsv
+except ImportError as e:
+    print(f"\n[AVISO] Falha ao importar dependências do exportador: {e}")
+    print("Dica: Certifique-se de ter rodado os uvs certinhos dentro da pasta sfia_safic e também exportador.")
+    export_excel = None
+    export_tsv = None
+
+def gerar_rel_item(cursor, out_path, debug=False):
+
+    iniciar_relatorio(out_path, "Relatório de Itens", debug=debug)
+
+    # Define o caminho do novo banco de dados analítico na pasta --dir
+    dir_out = Path(out_path).parent
+    db_item_path = dir_out / "item_base.sqlite"
     
-    cursor.execute("PRAGMA database_list;")
-    # Configurações de alta performance para a sessão atual
-#    cursor.execute("PRAGMA temp_store = MEMORY;") # Força tabelas temporárias para a RAM
-#    cursor.execute("PRAGMA mmap_size = 30000000000;") # Permite mapear até 30GB na memória
-#    cursor.execute("PRAGMA cache_size = -2000000;") # Dá 2GB de cache para o SQLite
+    print(" ➔ Criando visualização temporária no disco...")
 
-    db_list = cursor.fetchall()
-    sia_path = next((f for seq, name, f in db_list if name == 'main'), None)
+    # Anexa o novo banco de dados (se o arquivo não existir, o SQLite cria na hora)
+    cursor.execute(f"ATTACH DATABASE '{db_item_path}' AS item_db;")
     
-    if not sia_path:
-        print(" [ERRO] Não foi possível determinar o caminho do banco SIA.")
-        return
+    # Limpa a tabela caso o auditor esteja rodando o script pela segunda vez na mesma pasta
+    cursor.execute("DROP TABLE IF EXISTS item_db.item_base;")
 
-    sia_file = Path(sia_path)
-    item_db_name = sia_file.name.replace('sia', 'item')
-    item_db_path = sia_file.parent / item_db_name
-
-    cursor.execute(f"ATTACH DATABASE '{item_db_path}' AS db_item;")
-
-    cursor.execute("SELECT name FROM db_item.sqlite_master WHERE type='table' AND name='tb_DAIg';")
-    need_build = cursor.fetchone() is None
-
-    # =========================================================================
-    # 2. MATERIALIZAÇÃO (CACHE DEFINITIVO) EM ESTÁGIOS PARA ACELERAÇÃO
-    # =========================================================================
-    if need_build:
-        print(f" ⏳ Criando banco de aceleração '{item_db_name}' (Isso pode levar alguns minutos)...")
-        start_time = time.time()
-        
-        # ---------------------------------------------------------
-        # ETAPA A: Extração Crua (Sem SUM/AVG e Sem GROUP BY)
-        # Joga para a memória temporária (temp.) para não inchar o DB físico
-        # ---------------------------------------------------------
-        print("    [1/3] Fazendo os JOINs e extraindo dados brutos...")
-        sql_raw = """
-        SELECT 
-            B.tp_oper, B.tp_codSit, B.tp_origem, B.origem,
-            EI.cfop AS cfopcv, EI.dfi, EI.st, EI.classe, EI.g1, EI.c3, EI.g2, EI.g3, EI.descri_simplif,
-            AI.referencia, AI.cstCsosnIcms, AI.indCstCsosn, AI.indOrigem, AI.cfop, AI.aliqIcms, AI.aliqIcmsSt, AI.unid,
-            AI.COD_NCM, AI.CEST, 
-            BI.cnpj AS BIcnpj, substr(CHV_DFE, 7, 14) AS CHV_DFE_CNPJ,
-            BI.codigo AS BIcodigo, BI.descricao AS BIdescricao,
-            CASE WHEN B.origem = 'EfdC100' THEN 'Usar dados dfe_fiscal_EfdC170' ELSE 'Usar dados dfe_fiscal_NfeC170' END AS FONTE,
-            I.COD_ITEM, I.UNID AS I_UNID, I.IND_MOV, I.CST_ICMS, I.CFOP AS I_CFOP, I.COD_NAT, I.ALIQ_ICMS AS I_ALIQ_ICMS, 
-            I.ALIQ_ST, I.IND_APUR, I.CST_IPI, I.COD_ENQ, I.ALIQ_IPI, I.COD_CTA,
-
-            -- Valores numéricos puros (sem SUM/AVG ainda)
-            CASE WHEN EI.cfop < 5000 THEN -AI.valorDaOperacao ELSE AI.valorDaOperacao END AS raw_es_valcon,
-            CASE WHEN EI.cfop < 5000 THEN -AI.bcIcmsOpPropria ELSE AI.bcIcmsOpPropria END AS raw_es_bcicms,
-            CASE WHEN EI.cfop < 5000 THEN -AI.icmsProprio ELSE AI.icmsProprio END AS raw_es_icms,
-            CASE WHEN EI.cfop < 5000 THEN -AI.bcIcmsSt ELSE AI.bcIcmsSt END AS raw_es_bcicmsst,
-            CASE WHEN EI.cfop < 5000 THEN -AI.icmsSt ELSE AI.icmsSt END AS raw_es_icmsst,
-            
-            AI.bcIcmsOpPropria, AI.bcIcmsSt, AI.valorDaOperacao, AI.icmsProprio, AI.icmsSt, AI.qtde,
-            I.QTD AS I_QTD, I.VL_ITEM AS I_VL_ITEM, I.VL_DESC AS I_VL_DESC, I.VL_BC_ICMS AS I_VL_BC_ICMS, 
-            I.VL_ICMS AS I_VL_ICMS, I.VL_BC_ICMS_ST AS I_VL_BC_ICMS_ST, I.VL_ICMS_ST AS I_VL_ICMS_ST, 
-            I.VL_BC_IPI AS I_VL_BC_IPI, I.VL_IPI AS I_VL_IPI,
-
-            AI.aliqEfetOpSemIpi, AI.aliqEfetOpComIpi, AI.mvaCalculado,
-            I.aliqEfetOpSemIpi AS I_aliqEfetOpSemIpi, I.aliqEfetOpComIpi AS I_aliqEfetOpComIpi, I.mvaCalculado AS I_mvaCalculado
-
+    cursor.execute("""
+        CREATE TABLE item_db.item_base AS
+        SELECT  EI.cfop AS cfopcv,
+          CASE WHEN EI.cfop < 5000 THEN -AI.valorDaOperacao ELSE AI.valorDaOperacao END AS es_valcon,
+          -- Classes de BC ICMS reduzidas
+          CASE 
+            WHEN AI.valorDaOperacao = 0 THEN 'ValCon=0'
+            WHEN AI.bcIcmsOpPropria = 0 THEN 'BCIcms=0'
+            WHEN (AI.bcIcmsOpPropria / NULLIF(AI.valorDaOperacao - AI.icmsSt, 0)) > 1 THEN '>100'
+			WHEN (AI.bcIcmsOpPropria / NULLIF(AI.valorDaOperacao - AI.icmsSt, 0)) > 0.995 THEN 'BCIcms=ValCon'
+			WHEN ((AI.bcIcmsOpPropria + DA_T.VL_IPI) / NULLIF(AI.valorDaOperacao - AI.icmsSt, 0)) > 0.995 THEN 'BCIcms=ValConSemIpi'
+			WHEN (AI.bcIcmsOpPropria / NULLIF(AI.valorDaOperacao - AI.icmsSt, 0)) BETWEEN 0.222 AND 0.223 THEN 'BCIcms(4%)=ValCon'
+			WHEN ((AI.bcIcmsOpPropria + DA_T.VL_IPI) / NULLIF(AI.valorDaOperacao - AI.icmsSt, 0)) BETWEEN 0.222 AND 0.223 THEN 'BCIcms(4%)=ValConSemIpi'
+			WHEN (AI.bcIcmsOpPropria / NULLIF(AI.valorDaOperacao - AI.icmsSt, 0)) BETWEEN 0.388 AND 0.389 THEN 'BCIcms(7%)=ValCon'
+			WHEN ((AI.bcIcmsOpPropria + DA_T.VL_IPI) / NULLIF(AI.valorDaOperacao - AI.icmsSt, 0)) BETWEEN 0.388 AND 0.389 THEN 'BCIcms(7%)=ValConSemIpi'
+			WHEN (AI.bcIcmsOpPropria / NULLIF(AI.valorDaOperacao - AI.icmsSt, 0)) BETWEEN 0.666 AND 0.667 THEN 'BCIcms(12%)=ValCon'
+			WHEN ((AI.bcIcmsOpPropria + DA_T.VL_IPI) / NULLIF(AI.valorDaOperacao - AI.icmsSt, 0)) BETWEEN 0.666 AND 0.667 THEN 'BCIcms(12%)=ValConSemIpi'
+			WHEN (AI.bcIcmsOpPropria / NULLIF(AI.valorDaOperacao - AI.icmsSt, 0)) >= 0.90 THEN '90>99'
+			WHEN (AI.bcIcmsOpPropria / NULLIF(AI.valorDaOperacao - AI.icmsSt, 0)) >= 0.80 THEN '80>89'
+			WHEN (AI.bcIcmsOpPropria / NULLIF(AI.valorDaOperacao - AI.icmsSt, 0)) >= 0.70 THEN '70>79'
+			WHEN (AI.bcIcmsOpPropria / NULLIF(AI.valorDaOperacao - AI.icmsSt, 0)) >= 0.60 THEN '60>69'
+			WHEN (AI.bcIcmsOpPropria / NULLIF(AI.valorDaOperacao - AI.icmsSt, 0)) >= 0.50 THEN '50>59'
+			WHEN (AI.bcIcmsOpPropria / NULLIF(AI.valorDaOperacao - AI.icmsSt, 0)) >= 0.40 THEN '40>49'
+			WHEN (AI.bcIcmsOpPropria / NULLIF(AI.valorDaOperacao - AI.icmsSt, 0)) >= 0.30 THEN '30>39'
+			WHEN (AI.bcIcmsOpPropria / NULLIF(AI.valorDaOperacao - AI.icmsSt, 0)) >= 0.20 THEN '20>29'
+			WHEN (AI.bcIcmsOpPropria / NULLIF(AI.valorDaOperacao - AI.icmsSt, 0)) >= 0.10 THEN '10>19'
+			ELSE '<10' 
+          END AS redBCICMS,
+          CASE WHEN EI.cfop < 5000 THEN -AI.bcIcmsOpPropria ELSE AI.bcIcmsOpPropria END AS es_bcicms,
+          -- Classes de tipos de UFs e suas alíquotas típicas
+          CASE 
+		    WHEN DA_T.uf IN ('MG', 'PR', 'RJ', 'SC', 'RS') THEN 'UF12'
+		    WHEN DA_T.uf IN ('ES', 'MS', 'MT', 'GO', 'DF', 'BA', 'AL', 'SE', 'PE', 'PB', 'RN', 'CE', 'PI', 'MA', 'TO', 'PA', 'AM', 'AP', 'RR', 'RO', 'AC') THEN 'UF7'
+		    ELSE DA_T.uf
+		  END AS tp_uf,
+		  -- Classes de Alíquota ICMS Proprio
+          CASE 
+            WHEN AI.icmsProprio = 0 OR AI.bcIcmsOpPropria = 0 THEN '0'
+            WHEN (AI.icmsProprio / NULLIF(AI.bcIcmsOpPropria, 0)) < 0.011 THEN '<1'
+            WHEN (AI.icmsProprio / NULLIF(AI.bcIcmsOpPropria, 0)) < 0.021 THEN '1<2'
+            WHEN (AI.icmsProprio / NULLIF(AI.bcIcmsOpPropria, 0)) < 0.039 THEN '2<4'
+            WHEN (AI.icmsProprio / NULLIF(AI.bcIcmsOpPropria, 0)) < 0.041 THEN '4'
+            WHEN (AI.icmsProprio / NULLIF(AI.bcIcmsOpPropria, 0)) < 0.069 THEN '4<7'
+            WHEN (AI.icmsProprio / NULLIF(AI.bcIcmsOpPropria, 0)) < 0.071 THEN '7'
+            WHEN (AI.icmsProprio / NULLIF(AI.bcIcmsOpPropria, 0)) < 0.119 THEN '7<12'
+            WHEN (AI.icmsProprio / NULLIF(AI.bcIcmsOpPropria, 0)) < 0.121 THEN '12'
+            WHEN (AI.icmsProprio / NULLIF(AI.bcIcmsOpPropria, 0)) < 0.132 THEN '12<13,3'
+            WHEN (AI.icmsProprio / NULLIF(AI.bcIcmsOpPropria, 0)) < 0.134 THEN '13,3'
+            WHEN (AI.icmsProprio / NULLIF(AI.bcIcmsOpPropria, 0)) < 0.179 THEN '13,3<18'
+            WHEN (AI.icmsProprio / NULLIF(AI.bcIcmsOpPropria, 0)) < 0.181 THEN '18'
+            WHEN (AI.icmsProprio / NULLIF(AI.bcIcmsOpPropria, 0)) < 0.249 THEN '18<25'
+            WHEN (AI.icmsProprio / NULLIF(AI.bcIcmsOpPropria, 0)) < 0.251 THEN '25'
+            ELSE '>25'
+          END AS clAliqIcms,
+          CASE WHEN EI.cfop < 5000 THEN -AI.icmsProprio ELSE AI.icmsProprio END AS es_icms,
+          CASE 
+            WHEN AI.bcIcmsOpPropria = 0 OR AI.bcIcmsSt = 0 THEN 0
+            ELSE round(AI.bcIcmsSt / bcIcmsOpPropria * 100, 0)
+          END AS IvaSt,
+          CASE WHEN EI.cfop < 5000 THEN -AI.bcIcmsSt ELSE AI.bcIcmsSt END AS es_bcicmsst,
+          -- Classes de Alíquota ICMS ST
+          CASE 
+            WHEN AI.icmsSt = 0 OR AI.bcIcmsSt = 0 THEN '0'
+            WHEN (AI.icmsSt / NULLIF(AI.bcIcmsSt, 0)) < 0.011 THEN '<1'
+            WHEN (AI.icmsSt / NULLIF(AI.bcIcmsSt, 0)) < 0.039 THEN '1<4'
+            WHEN (AI.icmsSt / NULLIF(AI.bcIcmsSt, 0)) < 0.041 THEN '4'
+            WHEN (AI.icmsSt / NULLIF(AI.bcIcmsSt, 0)) < 0.069 THEN '4<7'
+            WHEN (AI.icmsSt / NULLIF(AI.bcIcmsSt, 0)) < 0.071 THEN '7'
+            WHEN (AI.icmsSt / NULLIF(AI.bcIcmsSt, 0)) < 0.119 THEN '7<12'
+            WHEN (AI.icmsSt / NULLIF(AI.bcIcmsSt, 0)) < 0.121 THEN '12'
+            WHEN (AI.icmsSt / NULLIF(AI.bcIcmsSt, 0)) < 0.132 THEN '12<13,3'
+            WHEN (AI.icmsSt / NULLIF(AI.bcIcmsSt, 0)) < 0.134 THEN '13,3'
+            WHEN (AI.icmsSt / NULLIF(AI.bcIcmsSt, 0)) < 0.179 THEN '13,3<18'
+            WHEN (AI.icmsSt / NULLIF(AI.bcIcmsSt, 0)) < 0.181 THEN '18'
+            WHEN (AI.icmsSt / NULLIF(AI.bcIcmsSt, 0)) < 0.249 THEN '18<25'
+            WHEN (AI.icmsSt / NULLIF(AI.bcIcmsSt, 00)) < 0.251 THEN '25'
+            ELSE '>25'
+          END AS clAliqIcmsSt,
+          CASE WHEN EI.cfop < 5000 THEN -AI.icmsSt ELSE AI.icmsSt END AS es_icmsst,
+          EI.dfi, EI.st, EI.classe, EI.g1, EI.c3, EI.g2, EI.g3, EI.descri_simplif,
+        '[DocAtrib_fiscal_DocAtributosItem]' AS tAI,
+        AI.referencia, AI.cstCsosnIcms, AI.indCstCsosn, AI.indOrigem, AI.cfop AS AIcfop, AI.aliqIcms AS AIaliqIcms, AI.aliqIcmsSt AS AIaliqIcmsSt,
+        AI.COD_NCM, AI.CEST, AI.qtde, AI.unid, AI.idItemServicoDeclarado,
+        AI.aliqEfetOpSemIpi, AI.aliqEfetOpComIpi, AI.mvaCalculado,
+        '[_fiscal_ItemServicoDeclarado]' AS tBI,
+        BI.cnpj AS BIcnpj, BI.descricao AS BIdescricao, BI.codigo AS BIcodigo,
+        '[DocAtrib_fiscal_DocAtributos]' AS tA,
+        A.codSit, A.indOper, A.indEmit, A.ufOrg, A.ufDest, A.dtEmissao, A.dtEntSd, 
+        A.vlTotalDoc, A.vlBcIcmsProprio, A.vlIcmsProprio, A.vlBcIcmsSt, A.vlIcmsSt, A.UfIniPrest, A.UfFimPrest,
+        '[idDocAtributos_compl]' AS tB,
+        B.tp_origem, B.origem, B.tp_oper, B.tp_codSit, B.cnpj_part, B.chave, B.NatOp,
+        '[docAtribTudao]' AS tDA_T,
+        DA_T.classifs, DA_T.ref	tp_origem, DA_T.origem, DA_T.tp_codSit, DA_T.indEmit, DA_T.indOper,
+        DA_T.cfops, DA_T.cfopcvs, DA_T.g1s, DA_T.vlTotalDoc, DA_T.vlBcIcmsProprio, DA_T.vlIcmsProprio, DA_T.vlBcIcmsSt, DA_T.vlIcmsSt,
+        DA_T.EfdPartCodSit, DA_T.EfdPartCfops, DA_T.EfdPartVal, DA_T.EfdPartIcms,
+        DA_T.descris, DA_T.codncms, DA_T.aliqs, DA_T.chave,
+        '[ChaveNroTudao]' AS tZ,
+        Z.Part, Z.ChNrClassifs, Z.ChNrRef, Z.ChNrOrigem, Z.ChNrCodSit, Z.ChNrIndEmit, Z.ChNrIndOper, Z.ChNrCfops, Z.ChNrCfopcvs, Z.ChNrG1s,
+        Z.DFeAliqs, Z.EfdAliqs, Z.obs
         FROM DocAtrib_fiscal_DocAtributosItem AS AI
         LEFT OUTER JOIN _fiscal_ItemServicoDeclarado AS BI ON BI.idItemServicoDeclarado = AI.idItemServicoDeclarado
         LEFT OUTER JOIN DocAtrib_fiscal_DocAtributos AS A ON A.idDocAtributos = AI.idDocAtributos
         LEFT OUTER JOIN idDocAtributos_compl AS B ON B.idDocAtributos = A.idDocAtributos
         LEFT OUTER JOIN docAtribTudao AS DA_T ON DA_T.idDocAtributos = A.idDocAtributos
-        LEFT OUTER JOIN dfe_fiscal_EfdC170 AS I ON I.idEfdC170 = AI.idRegistroItem AND A.indEmit = 1 AND B.origem = 'EfdC100'
-        LEFT OUTER JOIN dfe_fiscal_NfeC170 AS H ON H.idNfeC170 = AI.idRegistroItem AND B.origem = 'NFe'
+        LEFT OUTER JOIN ChaveNroTudao AS Z ON Z.chave = DA_T.chave
         LEFT OUTER JOIN cfopEntSai AS CES ON CES.cfop_dfe = CAST(AI.cfop AS INT)
         LEFT OUTER JOIN cfopd AS EI ON EI.cfop = CASE WHEN B.tp_origem = 'DFe' AND A.indEmit = 1 THEN CES.cfop_efd ELSE CAST(AI.cfop AS INT) END
-        -- utilize um WHERE como o abaixo pra ganhar tempo no desenvolvimento
-        -- WHERE AI.referencia = '2022-01-01'
-        """
-        cursor.execute("DROP TABLE IF EXISTS temp.tmp_raw_DAIg;")
-        cursor.execute(f"CREATE TEMPORARY TABLE temp.tmp_raw_DAIg AS {sql_raw}")
+    """)
 
-        # ---------------------------------------------------------
-        # ETAPA B: Criar índices na tabela crua para acelerar o agrupamento
-        # ---------------------------------------------------------
-        print("    [2/3] Criando índices na tabela crua...")
-        # Índices nos campos que têm maior diversidade ou relevância no agrupamento geral
-        # retirei esses índices abaixo porque eles não funcionam na prática, porque o GROUP BY é monstruoso
-#        cursor.execute("CREATE INDEX temp.idx_raw_a ON tmp_raw_DAIg(tp_oper, tp_codSit, tp_origem, origem, cfopcv, dfi, st);")
-#        cursor.execute("CREATE INDEX temp.idx_raw_b ON tmp_raw_DAIg(referencia);")
-#        cursor.execute("CREATE INDEX temp.idx_raw_c ON tmp_raw_DAIg(BIcnpj);")
+    # 3. Geração dos Relatórios (Leitura direta e instantânea da tabela temporária)
+    executar_e_formatar("""
+        SELECT * FROM item_db.item_base LIMIT 2
+    """, cursor, out_path, "Amostra das Operações (Top 2)")
 
-        # ---------------------------------------------------------
-        # ETAPA C: Agrupar, Somar e Salvar no Banco Definitivo
-        # ---------------------------------------------------------
-        print("    [3/3] Esmagando os dados (GROUP BY) para o banco definitivo...")
-        sql_agg = """
+    executar_e_formatar("""
         SELECT 
-            tp_oper, tp_codSit, tp_origem, origem, cfopcv, dfi, st, classe, g1, c3, g2, g3, descri_simplif,
-            referencia, cstCsosnIcms, indCstCsosn, indOrigem, cfop, aliqIcms, aliqIcmsSt, unid,
-            COD_NCM, CEST,
-            BIcnpj, CHV_DFE_CNPJ,
-            BIcodigo, BIdescricao, FONTE,
-            COD_ITEM, I_UNID, IND_MOV, CST_ICMS, I_CFOP, COD_NAT, I_ALIQ_ICMS, ALIQ_ST, IND_APUR, CST_IPI, COD_ENQ, ALIQ_IPI, COD_CTA,
-
-            ROUND(SUM(raw_es_valcon), 2) AS es_valcon,
-            ROUND(SUM(raw_es_bcicms), 2) AS es_bcicms,
-            ROUND(SUM(raw_es_icms), 2) AS es_icms,
-            ROUND(SUM(raw_es_bcicmsst), 2) AS es_bcicmsst,
-            ROUND(SUM(raw_es_icmsst), 2) AS es_icmsst,
-            
-            ROUND(SUM(bcIcmsOpPropria), 2) AS bcIcmsOpPropria,
-            ROUND(SUM(bcIcmsSt), 2) AS bcIcmsSt,
-            ROUND(SUM(valorDaOperacao), 2) AS valorDaOperacao,
-            ROUND(SUM(icmsProprio), 2) AS icmsProprio,
-            ROUND(SUM(icmsSt), 2) AS icmsSt,
-            ROUND(SUM(qtde), 4) AS qtde,
-            
-            ROUND(SUM(I_QTD), 4) AS I_QTD,
-            ROUND(SUM(I_VL_ITEM), 2) AS I_VL_ITEM,
-            ROUND(SUM(I_VL_DESC), 2) AS I_VL_DESC,
-            ROUND(SUM(I_VL_BC_ICMS), 2) AS I_VL_BC_ICMS,
-            ROUND(SUM(I_VL_ICMS), 2) AS I_VL_ICMS,
-            ROUND(SUM(I_VL_BC_ICMS_ST), 2) AS I_VL_BC_ICMS_ST,
-            ROUND(SUM(I_VL_ICMS_ST), 2) AS I_VL_ICMS_ST,
-            ROUND(SUM(I_VL_BC_IPI), 2) AS I_VL_BC_IPI,
-            ROUND(SUM(I_VL_IPI), 2) AS I_VL_IPI,
-
-            ROUND(AVG(aliqEfetOpSemIpi), 4) AS aliqEfetOpSemIpi,
-            ROUND(AVG(aliqEfetOpComIpi), 4) AS aliqEfetOpComIpi,
-            ROUND(AVG(mvaCalculado), 4) AS mvaCalculado,
-            ROUND(AVG(I_aliqEfetOpSemIpi), 4) AS I_aliqEfetOpSemIpi,
-            ROUND(AVG(I_aliqEfetOpComIpi), 4) AS I_aliqEfetOpComIpi,
-            ROUND(AVG(I_mvaCalculado), 4) AS I_mvaCalculado
-
-        FROM temp.tmp_raw_DAIg
-        GROUP BY
-            tp_oper, tp_codSit, tp_origem, origem, cfopcv,
-            referencia, cstCsosnIcms, indCstCsosn, indOrigem, cfop, aliqIcms, aliqIcmsSt, unid,
-            COD_NCM, CEST, BIcnpj, CHV_DFE_CNPJ, BIcodigo, BIdescricao, FONTE,
-            COD_ITEM, I_UNID, IND_MOV, CST_ICMS, I_CFOP, COD_NAT, I_ALIQ_ICMS, ALIQ_ST, IND_APUR, CST_IPI, COD_ENQ, ALIQ_IPI, COD_CTA
-        """
-        # não coloquei dfi, st, classe, g1, c3, g2, g3, descri_simplif NO GROUP BY
-        #   porque eles são ligados à cfopcv, só preciso então agrupar esse campo, ganho tempo e memória
-        cursor.execute("DROP TABLE IF EXISTS db_item.tb_DAIg;")
-        cursor.execute(f"CREATE TABLE db_item.tb_DAIg AS {sql_agg}")
-        
-        # Limpa a memória temporária
-        cursor.execute("DROP TABLE temp.tmp_raw_DAIg;")
-        
-        # Índices definitivos para os seus relatórios
-        print("    [+] Finalizando índices definitivos...")
-        cursor.execute("CREATE INDEX db_item.idx_tb_codsit ON tb_DAIg(tp_codSit);")
-        cursor.execute("CREATE INDEX db_item.idx_tb_g1 ON tb_DAIg(g1);")
-        
-        elapsed = time.time() - start_time
-        print(f" ✅ Banco '{item_db_name}' construído com sucesso em {elapsed:.2f} segundos!")
-    else:
-        print(f" ⚡ Cache localizado: '{item_db_name}'! Pulando a materialização.")
-
-    print(" 📊 Extraindo visões analíticas...")
-
-    # =========================================================================
-    # 3. EXTRAÇÃO DOS RELATÓRIOS (MANTIDO INTACTO)
-    # =========================================================================
-
-    executar_e_formatar(f"""
-        SELECT * FROM db_item.tb_DAIg LIMIT 2
-    """, cursor, out_path, "Amostra dos Itens (Top 2)")
-
-
-    executar_e_formatar(f"""
-        SELECT 
-            tp_codSit, tp_origem, tp_oper,
+            tp_origem, tp_oper, tp_codSit, 
             ROUND(SUM(es_valcon), 2) as es_valcon, 
             ROUND(SUM(es_bcicms), 2) as es_bcicms, 
             ROUND(SUM(es_icms), 2) as es_icms, 
             ROUND(SUM(es_bcicmsst), 2) as es_bcicmsst, 
             ROUND(SUM(es_icmsst), 2) as es_icmsst
-        FROM db_item.tb_DAIg
-        GROUP BY tp_codSit, tp_origem, tp_oper
-    """, cursor, out_path, "Resumo por Situação (tp_codSit)")
+        FROM item_db.item_base
+        GROUP BY tp_origem, tp_oper, tp_codSit
+    """, cursor, out_path, "Resumo por Situação")
 
-
-    executar_e_formatar(f"""
-        SELECT 
-            g1, 
-            ROUND(SUM(es_valcon), 2) as es_valcon, 
-            ROUND(SUM(es_bcicms), 2) as es_bcicms, 
-            ROUND(SUM(es_icms), 2) as es_icms, 
-            ROUND(SUM(es_bcicmsst), 2) as es_bcicmsst, 
-            ROUND(SUM(es_icmsst), 2) as es_icmsst
-        FROM db_item.tb_DAIg
-        WHERE tp_codSit = 'válido'
-        GROUP BY g1
-    """, cursor, out_path, "Resumo por Grupo_n1 (Apenas Documentos Válidos)")
-
-
-    executar_e_formatar(f"""
+    executar_e_formatar("""
         SELECT 
             tp_origem, g1, 
             ROUND(SUM(es_valcon), 2) as es_valcon, 
@@ -212,119 +172,317 @@ def gerar_rel_item(cursor, out_path):
             ROUND(SUM(es_icms), 2) as es_icms, 
             ROUND(SUM(es_bcicmsst), 2) as es_bcicmsst, 
             ROUND(SUM(es_icmsst), 2) as es_icmsst
-        FROM db_item.tb_DAIg
+        FROM item_db.item_base
         WHERE tp_codSit = 'válido'
         GROUP BY tp_origem, g1
-    """, cursor, out_path, "Resumo por Grupo_n2 (Apenas Documentos Válidos)")
+    """, cursor, out_path, "Resumo por Grupo (Apenas Documentos Válidos)")
 
-
-    executar_e_formatar(f"""
-        SELECT 
-            tp_origem, g1, dfi,
-            ROUND(SUM(es_valcon), 2) as es_valcon, 
-            ROUND(SUM(es_bcicms), 2) as es_bcicms, 
-            ROUND(SUM(es_icms), 2) as es_icms, 
-            ROUND(SUM(es_bcicmsst), 2) as es_bcicmsst, 
-            ROUND(SUM(es_icmsst), 2) as es_icmsst
-        FROM db_item.tb_DAIg
-        WHERE tp_codSit = 'válido'
-        GROUP BY tp_origem, g1, dfi
-        ORDER BY tp_origem, g1, es_valcon DESC
-    """, cursor, out_path, "Resumo por Grupo_n3_1 (Apenas Documentos Válidos)")
-
-    executar_e_formatar(f"""
-        SELECT 
-            tp_origem, g1, classe, descri_simplif,
-            ROUND(SUM(es_valcon), 2) as es_valcon, 
-            ROUND(SUM(es_bcicms), 2) as es_bcicms, 
-            ROUND(SUM(es_icms), 2) as es_icms, 
-            ROUND(SUM(es_bcicmsst), 2) as es_bcicmsst, 
-            ROUND(SUM(es_icmsst), 2) as es_icmsst
-        FROM db_item.tb_DAIg
-        WHERE tp_codSit = 'válido'
-        GROUP BY tp_origem, g1, classe, descri_simplif
-        ORDER BY tp_origem, g1, es_valcon DESC
-    """, cursor, out_path, "Resumo por Grupo_n3_2 (Apenas Documentos Válidos)")
-
-
-    executar_e_formatar(f"""
-        SELECT 
-            tp_origem, g1, dfi, classe, descri_simplif, aliqIcms,
-            ROUND(SUM(es_valcon), 2) as es_valcon, 
-            ROUND(SUM(es_bcicms), 2) as es_bcicms, 
-            ROUND(SUM(es_icms), 2) as es_icms, 
-            ROUND(SUM(es_bcicmsst), 2) as es_bcicmsst, 
-            ROUND(SUM(es_icmsst), 2) as es_icmsst
-        FROM db_item.tb_DAIg
-        WHERE tp_codSit = 'válido'
-        GROUP BY tp_origem, g1, dfi, classe, descri_simplif, aliqIcms
-        ORDER BY tp_origem, g1, es_valcon DESC
-    """, cursor, out_path, "Resumo por Grupo_n4 (Apenas Documentos Válidos)")
-
-
-    executar_e_formatar(f"""
-        SELECT 
-            tp_origem, g1, dfi, classe, descri_simplif, aliqIcms, indOrigem, cstCsosnIcms,
-            ROUND(SUM(es_valcon), 2) as es_valcon, 
-            ROUND(SUM(es_bcicms), 2) as es_bcicms, 
-            ROUND(SUM(es_icms), 2) as es_icms, 
-            ROUND(SUM(es_bcicmsst), 2) as es_bcicmsst, 
-            ROUND(SUM(es_icmsst), 2) as es_icmsst
-        FROM db_item.tb_DAIg
-        WHERE tp_codSit = 'válido'
-        GROUP BY tp_origem, g1, dfi, classe, descri_simplif, aliqIcms, indOrigem, cstCsosnIcms
-        ORDER BY tp_origem, g1, es_valcon DESC
-    """, cursor, out_path, "Resumo por Grupo_n5 (Apenas Documentos Válidos)")
-
-
-    executar_e_formatar(f"""
-        WITH BaseDados AS (
+    executar_e_formatar("""
+        WITH Agrupado AS (
             SELECT 
-                tp_codSit, tp_origem, tp_oper,
-                COALESCE(BIcodigo, 'N/I') AS BIcodigo, 
-                COALESCE(BIdescricao, 'SEM DESCRIÇÃO') AS BIdescricao,
-                ROUND(SUM(es_valcon), 2) as es_valcon, 
-                ROUND(SUM(es_bcicms), 2) as es_bcicms, 
-                ROUND(SUM(es_icms), 2) as es_icms, 
-                ROUND(SUM(es_bcicmsst), 2) as es_bcicmsst, 
-                ROUND(SUM(es_icmsst), 2) as es_icmsst,
-                ROW_NUMBER() OVER (
-                    PARTITION BY tp_codSit, tp_origem, tp_oper 
-                    ORDER BY ABS(SUM(es_valcon)) DESC
-                ) as ranking
-            FROM db_item.tb_DAIg
-            GROUP BY tp_codSit, tp_origem, tp_oper, BIcodigo, BIdescricao
+                tp_origem, g1,
+                tp_uf,
+                clAliqIcms,
+                SUM(es_valcon) as valcon, 
+                SUM(es_bcicms) as bcicms, 
+                SUM(es_icms) as icms, 
+                SUM(es_bcicmsst) as bcicmsst, 
+                SUM(es_icmsst) as icmsst
+            FROM item_db.item_base
+            WHERE tp_codSit = 'válido'
+            GROUP BY tp_origem, g1, tp_uf, clAliqIcms
         ),
-        VisaoFinal AS (
-            -- Bloco 1: Os Top 20 itens
+        Ranked AS (
             SELECT 
-                tp_codSit, tp_origem, tp_oper,
-                BIcodigo, BIdescricao,
-                es_valcon, es_bcicms, es_icms, es_bcicmsst, es_icmsst
-            FROM BaseDados 
-            WHERE ranking <= 20
-            
-            UNION ALL
-            
-            -- Bloco 2: O resto esmagado na linha 'DEMAIS ITENS'
-            SELECT 
-                tp_codSit, tp_origem, tp_oper,
-                '---' AS BIcodigo, 'DEMAIS ITENS (SOMA)' AS BIdescricao,
-                ROUND(SUM(es_valcon), 2) AS es_valcon, 
-                ROUND(SUM(es_bcicms), 2) AS es_bcicms, 
-                ROUND(SUM(es_icms), 2) AS es_icms, 
-                ROUND(SUM(es_bcicmsst), 2) AS es_bcicmsst, 
-                ROUND(SUM(es_icmsst), 2) AS es_icmsst
-            FROM BaseDados 
-            WHERE ranking > 20
-            GROUP BY tp_codSit, tp_origem, tp_oper
-            HAVING COUNT(*) > 0
+                *,
+                -- Cria um ranking de importância (por valor absoluto) DENTRO de cada grupo
+                ROW_NUMBER() OVER(PARTITION BY tp_origem, g1 ORDER BY ABS(valcon) DESC) as rn
+            FROM Agrupado
         )
-        
-        -- Agora o SELECT externo pode usar CASE e ABS à vontade no ORDER BY!
-        SELECT * FROM VisaoFinal
+        SELECT 
+            tp_origem, g1, 
+            CASE WHEN rn <= 6 THEN tp_uf ELSE 'Diversas' END AS tp_uf, 
+            CASE WHEN rn <= 6 THEN clAliqIcms ELSE 'Outras' END AS clAliqIcms,
+            ROUND(SUM(valcon), 2) as es_valcon, 
+            ROUND(SUM(bcicms), 2) as es_bcicms, 
+            ROUND(SUM(icms), 2) as es_icms, 
+            ROUND(SUM(bcicmsst), 2) as es_bcicmsst, 
+            ROUND(SUM(icmsst), 2) as es_icmsst
+        FROM Ranked
+        GROUP BY 
+            tp_origem, g1, 
+            CASE WHEN rn <= 6 THEN tp_uf ELSE 'Diversas' END,
+            CASE WHEN rn <= 6 THEN clAliqIcms ELSE 'Outras' END
         ORDER BY 
-            tp_codSit, tp_origem, tp_oper, 
-            CASE WHEN BIcodigo = '---' THEN 1 ELSE 0 END, 
-            ABS(es_valcon) DESC;
-    """, cursor, out_path, "Top 20 Itens por Situação, Origem e Operação")
+            tp_origem ASC, g1 ASC, 
+            CASE WHEN rn > 6 THEN 1 ELSE 0 END ASC, -- Garante que a linha 'Outras' fique fixada no rodapé do grupo
+            ABS(SUM(valcon)) DESC
+    """, cursor, out_path, "Resumo por tp_origem, g1, Top 6 abs(es_valcon) + Outras (Apenas Documentos Válidos), com tp_uf e clAliqIcms")
+
+
+    executar_e_formatar("""
+        WITH Agrupado AS (
+            SELECT 
+                tp_origem, g1,
+                tp_uf,
+                clAliqIcms,
+                redBCICMS, 
+                SUM(es_valcon) as valcon, 
+                SUM(es_bcicms) as bcicms, 
+                SUM(es_icms) as icms, 
+                SUM(es_bcicmsst) as bcicmsst, 
+                SUM(es_icmsst) as icmsst
+            FROM item_db.item_base
+            WHERE tp_codSit = 'válido'
+            GROUP BY tp_origem, g1, tp_uf, clAliqIcms, redBCICMS
+        ),
+        Ranked AS (
+            SELECT 
+                *,
+                -- Cria um ranking de importância (por valor absoluto) DENTRO de cada grupo
+                ROW_NUMBER() OVER(PARTITION BY tp_origem, g1 ORDER BY ABS(valcon) DESC) as rn
+            FROM Agrupado
+        )
+        SELECT 
+            tp_origem, g1, 
+            CASE WHEN rn <= 6 THEN tp_uf ELSE 'Diversas' END AS tp_uf, 
+            CASE WHEN rn <= 6 THEN clAliqIcms ELSE 'Diversas' END AS clAliqIcms,
+            CASE WHEN rn <= 6 THEN redBCICMS ELSE 'Diversas' END AS redBCICMS,
+            ROUND(SUM(valcon), 2) as es_valcon, 
+            ROUND(SUM(bcicms), 2) as es_bcicms, 
+            ROUND(SUM(icms), 2) as es_icms, 
+            ROUND(SUM(bcicmsst), 2) as es_bcicmsst, 
+            ROUND(SUM(icmsst), 2) as es_icmsst
+        FROM Ranked
+        GROUP BY 
+            tp_origem, g1, 
+            CASE WHEN rn <= 6 THEN tp_uf ELSE 'Diversas' END,
+            CASE WHEN rn <= 6 THEN clAliqIcms ELSE 'Diversas' END,
+            CASE WHEN rn <= 6 THEN redBCICMS ELSE 'Diversas' END
+        ORDER BY 
+            tp_origem ASC, g1 ASC, 
+            CASE WHEN rn > 6 THEN 1 ELSE 0 END ASC, -- Garante que a linha 'Outras' fique fixada no rodapé do grupo
+            ABS(SUM(valcon)) DESC
+    """, cursor, out_path, "Resumo por tp_origem, g1, Top 6 abs(es_valcon) + Outras (Apenas Documentos Válidos), com tp_uf, clAliqIcms e redBCICMS")
+
+
+    executar_e_formatar("""
+        WITH Agrupado AS (
+            SELECT 
+                tp_origem,
+                COD_NCM,
+                tp_uf,
+                clAliqIcms,
+                redBCICMS, 
+                SUM(es_valcon) as valcon, 
+                SUM(es_bcicms) as bcicms, 
+                SUM(es_icms) as icms, 
+                SUM(es_bcicmsst) as bcicmsst, 
+                SUM(es_icmsst) as icmsst
+            FROM item_db.item_base
+            WHERE tp_codSit = 'válido' AND g1='1-Receitas'
+            GROUP BY tp_origem, COD_NCM, tp_uf, clAliqIcms, redBCICMS
+        ),
+        Ranked AS (
+            SELECT 
+                *,
+                -- Cria um ranking de importância (por valor absoluto) DENTRO de cada grupo
+                ROW_NUMBER() OVER(PARTITION BY tp_origem ORDER BY ABS(valcon) DESC) as rn
+            FROM Agrupado
+        )
+        SELECT 
+            tp_origem,
+            CASE WHEN rn <= 20 THEN COD_NCM ELSE 'Diversas' END AS COD_NCM, 
+            CASE WHEN rn <= 20 THEN tp_uf ELSE 'Diversas' END AS tp_uf, 
+            CASE WHEN rn <= 20 THEN clAliqIcms ELSE 'Diversas' END AS clAliqIcms,
+            CASE WHEN rn <= 20 THEN redBCICMS ELSE 'Diversas' END AS redBCICMS,
+            ROUND(SUM(valcon), 2) as es_valcon, 
+            ROUND(SUM(bcicms), 2) as es_bcicms, 
+            ROUND(SUM(icms), 2) as es_icms, 
+            ROUND(SUM(bcicmsst), 2) as es_bcicmsst, 
+            ROUND(SUM(icmsst), 2) as es_icmsst
+        FROM Ranked
+        GROUP BY 
+            tp_origem,
+            CASE WHEN rn <= 20 THEN COD_NCM ELSE 'Diversas' END,
+            CASE WHEN rn <= 20 THEN tp_uf ELSE 'Diversas' END,
+            CASE WHEN rn <= 20 THEN clAliqIcms ELSE 'Diversas' END,
+            CASE WHEN rn <= 20 THEN redBCICMS ELSE 'Diversas' END
+        ORDER BY 
+            tp_origem ASC, 
+            CASE WHEN rn > 20 THEN 1 ELSE 0 END ASC, -- Garante que a linha 'Outras' fique fixada no rodapé do grupo
+            ABS(SUM(valcon)) DESC
+    """, cursor, out_path, "Resumo por tp_origem, Top 20 abs(es_valcon) + Outras (Apenas Documentos Válidos g1='1-Receitas'), com COD_NCM, tp_uf, clAliqIcms e redBCICMS")
+
+    executar_e_formatar("""
+        WITH Agrupado AS (
+            SELECT 
+                tp_origem,
+                COD_NCM,
+                tp_uf,
+                clAliqIcms,
+                redBCICMS, 
+                SUM(es_valcon) as valcon, 
+                SUM(es_bcicms) as bcicms, 
+                SUM(es_icms) as icms, 
+                SUM(es_bcicmsst) as bcicmsst, 
+                SUM(es_icmsst) as icmsst
+            FROM item_db.item_base
+            WHERE tp_codSit = 'válido' AND g1='2-Compras Insumos'
+            GROUP BY tp_origem, COD_NCM, tp_uf, clAliqIcms, redBCICMS
+        ),
+        Ranked AS (
+            SELECT 
+                *,
+                -- Cria um ranking de importância (por valor absoluto) DENTRO de cada grupo
+                ROW_NUMBER() OVER(PARTITION BY tp_origem ORDER BY ABS(valcon) DESC) as rn
+            FROM Agrupado
+        )
+        SELECT 
+            tp_origem,
+            CASE WHEN rn <= 20 THEN COD_NCM ELSE 'Diversas' END AS COD_NCM, 
+            CASE WHEN rn <= 20 THEN tp_uf ELSE 'Diversas' END AS tp_uf, 
+            CASE WHEN rn <= 20 THEN clAliqIcms ELSE 'Diversas' END AS clAliqIcms,
+            CASE WHEN rn <= 20 THEN redBCICMS ELSE 'Diversas' END AS redBCICMS,
+            ROUND(SUM(valcon), 2) as es_valcon, 
+            ROUND(SUM(bcicms), 2) as es_bcicms, 
+            ROUND(SUM(icms), 2) as es_icms, 
+            ROUND(SUM(bcicmsst), 2) as es_bcicmsst, 
+            ROUND(SUM(icmsst), 2) as es_icmsst
+        FROM Ranked
+        GROUP BY 
+            tp_origem,
+            CASE WHEN rn <= 20 THEN COD_NCM ELSE 'Diversas' END,
+            CASE WHEN rn <= 20 THEN tp_uf ELSE 'Diversas' END,
+            CASE WHEN rn <= 20 THEN clAliqIcms ELSE 'Diversas' END,
+            CASE WHEN rn <= 20 THEN redBCICMS ELSE 'Diversas' END
+        ORDER BY 
+            tp_origem ASC, 
+            CASE WHEN rn > 20 THEN 1 ELSE 0 END ASC, -- Garante que a linha 'Outras' fique fixada no rodapé do grupo
+            ABS(SUM(valcon)) DESC
+    """, cursor, out_path, "Resumo por tp_origem, Top 20 abs(es_valcon) + Outras (Apenas Documentos Válidos g1='2-Compras Insumos'), com COD_NCM, tp_uf, clAliqIcms e redBCICMS")
+
+
+    executar_e_formatar("""
+        WITH Agrupado AS (
+            SELECT 
+                tp_origem,
+                idItemServicoDeclarado, BIdescricao,
+                tp_uf,
+                clAliqIcms,
+                redBCICMS, 
+                SUM(es_valcon) as valcon, 
+                SUM(es_bcicms) as bcicms, 
+                SUM(es_icms) as icms, 
+                SUM(es_bcicmsst) as bcicmsst, 
+                SUM(es_icmsst) as icmsst
+            FROM item_db.item_base
+            WHERE tp_codSit = 'válido' AND g1='1-Receitas'
+            GROUP BY tp_origem, idItemServicoDeclarado, tp_uf, clAliqIcms, redBCICMS
+        ),
+        Ranked AS (
+            SELECT 
+                *,
+                -- Cria um ranking de importância (por valor absoluto) DENTRO de cada grupo
+                ROW_NUMBER() OVER(PARTITION BY tp_origem ORDER BY ABS(valcon) DESC) as rn
+            FROM Agrupado
+        )
+        SELECT 
+            tp_origem,
+            CASE WHEN rn <= 30 THEN idItemServicoDeclarado ELSE 'Diversas' END AS idItemServicoDeclarado, 
+            CASE WHEN rn <= 30 THEN BIdescricao ELSE 'Diversas' END AS BIdescricao,
+            CASE WHEN rn <= 30 THEN tp_uf ELSE 'Diversas' END AS tp_uf, 
+            CASE WHEN rn <= 30 THEN clAliqIcms ELSE 'Diversas' END AS clAliqIcms,
+            CASE WHEN rn <= 30 THEN redBCICMS ELSE 'Diversas' END AS redBCICMS,
+            ROUND(SUM(valcon), 2) as es_valcon, 
+            ROUND(SUM(bcicms), 2) as es_bcicms, 
+            ROUND(SUM(icms), 2) as es_icms, 
+            ROUND(SUM(bcicmsst), 2) as es_bcicmsst, 
+            ROUND(SUM(icmsst), 2) as es_icmsst
+        FROM Ranked
+        GROUP BY 
+            tp_origem,
+            CASE WHEN rn <= 30 THEN idItemServicoDeclarado ELSE 'Diversas' END,
+            CASE WHEN rn <= 30 THEN tp_uf ELSE 'Diversas' END,
+            CASE WHEN rn <= 30 THEN clAliqIcms ELSE 'Diversas' END,
+            CASE WHEN rn <= 30 THEN redBCICMS ELSE 'Diversas' END
+        ORDER BY 
+            tp_origem ASC, 
+            CASE WHEN rn > 30 THEN 1 ELSE 0 END ASC, -- Garante que a linha 'Outras' fique fixada no rodapé do grupo
+            ABS(SUM(valcon)) DESC
+    """, cursor, out_path, "Resumo por tp_origem, Top 30 abs(es_valcon) + Outras (Apenas Documentos Válidos g1='1-Receitas'), com idItemServicoDeclarado, tp_uf, clAliqIcms e redBCICMS")
+
+
+    executar_e_formatar("""
+        WITH Agrupado AS (
+            SELECT 
+                tp_origem,
+                idItemServicoDeclarado, BIdescricao,
+                tp_uf,
+                clAliqIcms,
+                redBCICMS, 
+                SUM(es_valcon) as valcon, 
+                SUM(es_bcicms) as bcicms, 
+                SUM(es_icms) as icms, 
+                SUM(es_bcicmsst) as bcicmsst, 
+                SUM(es_icmsst) as icmsst
+            FROM item_db.item_base
+            WHERE tp_codSit = 'válido' AND g1='2-Compras Insumos'
+            GROUP BY tp_origem, idItemServicoDeclarado, tp_uf, clAliqIcms, redBCICMS
+        ),
+        Ranked AS (
+            SELECT 
+                *,
+                -- Cria um ranking de importância (por valor absoluto) DENTRO de cada grupo
+                ROW_NUMBER() OVER(PARTITION BY tp_origem ORDER BY ABS(valcon) DESC) as rn
+            FROM Agrupado
+        )
+        SELECT 
+            tp_origem,
+            CASE WHEN rn <= 30 THEN idItemServicoDeclarado ELSE 'Diversas' END AS idItemServicoDeclarado, 
+            CASE WHEN rn <= 30 THEN BIdescricao ELSE 'Diversas' END AS BIdescricao,
+            CASE WHEN rn <= 30 THEN tp_uf ELSE 'Diversas' END AS tp_uf, 
+            CASE WHEN rn <= 30 THEN clAliqIcms ELSE 'Diversas' END AS clAliqIcms,
+            CASE WHEN rn <= 30 THEN redBCICMS ELSE 'Diversas' END AS redBCICMS,
+            ROUND(SUM(valcon), 2) as es_valcon, 
+            ROUND(SUM(bcicms), 2) as es_bcicms, 
+            ROUND(SUM(icms), 2) as es_icms, 
+            ROUND(SUM(bcicmsst), 2) as es_bcicmsst, 
+            ROUND(SUM(icmsst), 2) as es_icmsst
+        FROM Ranked
+        GROUP BY 
+            tp_origem,
+            CASE WHEN rn <= 30 THEN idItemServicoDeclarado ELSE 'Diversas' END,
+            CASE WHEN rn <= 30 THEN tp_uf ELSE 'Diversas' END,
+            CASE WHEN rn <= 30 THEN clAliqIcms ELSE 'Diversas' END,
+            CASE WHEN rn <= 30 THEN redBCICMS ELSE 'Diversas' END
+        ORDER BY 
+            tp_origem ASC, 
+            CASE WHEN rn > 30 THEN 1 ELSE 0 END ASC, -- Garante que a linha 'Outras' fique fixada no rodapé do grupo
+            ABS(SUM(valcon)) DESC
+    """, cursor, out_path, "Resumo por tp_origem, Top 30 abs(es_valcon) + Outras (Apenas Documentos Válidos g1='2-Compras Insumos'), com idItemServicoDeclarado, tp_uf, clAliqIcms e redBCICMS")
+
+    # =========================================================================
+    # --- EXPORTAÇÃO DOS ARQUIVOS FÍSICOS (.XLSX e .TXT) ---
+    # =========================================================================
+    if export_excel and export_tsv:
+        dir_out = Path(out_path).parent # Pasta de destino baseada no parametro --dir
+        
+        # 1. Exportar XLSX (Amostra 10k)
+        xlsx_path = dir_out / "item_base.xlsx"
+        print(f" ➔ Exportando amostra para Excel (1.000 linhas) em {xlsx_path.name}...")
+        cursor.execute("SELECT * FROM item_db.item_base LIMIT 1000")
+        linhas_xlsx = export_excel(cursor, xlsx_path)
+        print(f"    [OK] {linhas_xlsx} linhas exportadas.")
+
+        # 2. Exportar TXT Completo
+        txt_path = dir_out / "item_base.txt"
+        print(f" ➔ Na versão anterior, era exportado base completa para TXT (separado por tabulação) em {txt_path.name}...")
+        print(f"    [OK] Agora não faço mais isso, eu simplesmente deixo um sqlite pronto em {dir_out}/item_base.sqlite com a tabela item_base...")
+        # cursor.execute("SELECT * FROM _tmp_item_base")
+        # linhas_txt = export_tsv(cursor, txt_path)
+        # print(f"    [OK] {linhas_txt} linhas exportadas.")
+
+    # Não é estritamente necessário dar DROP pois o SQLite limpa ao fechar, 
+    # mas é boa prática para libertar o ficheiro temporário de sistema o quanto antes.
+    # cursor.execute("DROP TABLE IF EXISTS temp._tmp_item_base;")

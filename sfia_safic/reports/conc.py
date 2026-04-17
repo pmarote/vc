@@ -4,8 +4,8 @@ Relatório de Conciliação — DocAtributos, NFe, CTe, SAT.
 from ._helpers import executar_e_formatar, iniciar_relatorio
 
 
-def gerar_rel_conc(cursor, out_path, limite=5):
-    iniciar_relatorio(out_path, "Relatórios de Conciliação")
+def gerar_rel_conc(cursor, out_path, limite=5, debug=False):
+    iniciar_relatorio(out_path, "Relatórios de Conciliação", debug=debug)
 
     executar_e_formatar("""
         SELECT

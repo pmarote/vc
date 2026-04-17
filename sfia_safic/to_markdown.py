@@ -42,7 +42,8 @@ def export_markdown(
     attachments: str = "", 
     title: Optional[str] = None,
     sql_file: str = "",
-    mode: str = "w"  # Permite alternar entre escrever ('w') e adicionar ('a')
+    mode: str = "w",  # Permite alternar entre escrever ('w') e adicionar ('a')
+    show_meta: bool = False  # <--- NOVO PARÂMETRO
 ) -> None:
     """
     Gera Markdown streamando o cursor.
@@ -56,23 +57,20 @@ def export_markdown(
         if title:
             f.write(f"## {title}\n\n")
 
-        # --- BLOCO METADADOS & SQL (ESCONDIDO NO TOPO) ---
-        f.write('<details>\n  <summary><span style="font-size:0.9em; color:gray; cursor:pointer">🔍 Detalhes da Execução e Query SQL</span></summary>\n\n')
-        
-        data_hora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-        f.write(f"> 📅 **Gerado em:** `{data_hora}`\n")
-        
-        if db_path:
-            f.write(f"> 🗄️ **Base Principal:** `{db_path}`\n")
-        if attachments:
-            f.write(f"> 🔗 **Anexos:** `{attachments}`\n")
-        if sql_file:
-            f.write(f"> 📄 **Arquivo SQL:** `{sql_file}`\n")
-            
-        if sql_query:
-            f.write(f"\n```sql\n{sql_query.strip()}\n```\n")
-            
-        f.write("</details>\n\n")
+        # --- BLOCO METADADOS & SQL (AGORA CONDICIONAL) ---
+        if show_meta:
+            f.write('<details>\n  <summary><span style="font-size:0.9em; color:gray; cursor:pointer">🔍 Detalhes da Execução e Query SQL</span></summary>\n\n')
+            data_hora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+            f.write(f"> 📅 **Gerado em:** `{data_hora}`\n")
+            if db_path:
+                f.write(f"> 🗄️ **Base Principal:** `{db_path}`\n")
+            if attachments:
+                f.write(f"> 🔗 **Anexos:** `{attachments}`\n")
+            if sql_file:
+                f.write(f"> 📄 **Arquivo SQL:** `{sql_file}`\n")
+            if sql_query:
+                f.write(f"\n```sql\n{sql_query.strip()}\n```\n")
+            f.write("</details>\n\n")
         
         if not headers:
             f.write("> ⚠️ A consulta não retornou colunas.\n\n")
@@ -104,17 +102,19 @@ def export_markdown(
             f.write("| " + " | ".join(fmt_br(c) for c in row) + " |\n")
             row_count += 1
 
-        # --- RODAPÉ MINIMALISTA ---
-        f.write(f"\n> 📊 **Total de Registros:** {row_count}\n\n")
+        # --- RODAPÉ MINIMALISTA (AGORA CONDICIONAL) ---
+        if show_meta:
+            f.write(f"\n> 📊 **Total de Registros:** {row_count}\n\n")
 
 
 # --- MODO STANDALONE ---
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--db", required=True)
-    parser.add_argument("--sql", required=True)
-    parser.add_argument("--out", required=True)
+    parser = argparse.ArgumentParser(description="Exportador Standalone de SQLite para Markdown")
+    parser.add_argument("--db", required=True, help="Caminho do banco de dados")
+    parser.add_argument("--sql", required=True, help="Query SQL ou caminho para arquivo .sql")
+    parser.add_argument("--out", required=True, help="Caminho do arquivo de saída .md")
     parser.add_argument("--title", default="", help="Título do relatório")
+    parser.add_argument("--debug", action="store_true", help="Se definido, exibe metadados e SQL no topo") # NOVO
     args = parser.parse_args()
 
     try:
@@ -122,6 +122,7 @@ def main():
         sql_content = args.sql
         sql_path = Path(args.sql)
         
+        # Verifica se o que foi passado no --sql é um arquivo ou a query direta
         if sql_path.exists() and sql_path.is_file():
             sql_file_name = sql_path.name
             sql_content = sql_path.read_text(encoding="utf-8")
@@ -129,22 +130,25 @@ def main():
         conn = sqlite3.connect(args.db)
         cursor = conn.cursor()
         
+        # Executa a query
         cursor.execute(sql_content)
         
+        # Chama a exportação passando o estado do debug (show_meta)
         export_markdown(
             cursor=cursor, 
             out_path=args.out, 
             sql_query=sql_content, 
             db_path=args.db,
+            sql_file=sql_file_name,
             title=args.title,
-            sql_file=sql_file_name
+            show_meta=args.debug # AGORA REPASSANDO O PARAMETRO
         )
         
         conn.close()
-        sys.exit(0)
+        print(f"✅ Relatório gerado com sucesso em: {args.out}")
+        
     except Exception as e:
-        print(f"[ERRO MD] {e}")
-        sys.exit(1)
+        print(f"❌ Erro ao gerar relatório standalone: {e}")
 
 if __name__ == "__main__":
     main()

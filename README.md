@@ -108,7 +108,7 @@ Coleção de utilitários para o dia a dia:
 * **aiim.py**: Scraper automatizado para extração em lote de Autos de Infração (AIIM) do portal da SEFAZ, com persistência relacional em banco de dados SQLite e download automático de PDFs de decisões.
 * **pmcloud.py**: Sincronizador de arquivos conectado à sua nuvem privada via API PHP. Implementa backups incrementais com versionamento point-in-time, desduplicação inteligente baseada em SQLite e exclusão de arquivos órfãos via Garbage Collector. 
 
-### 4. [exportador] - Extração Flexível
+### 6. [exportador] - Extração Flexível
 Permite extrair resultados de consultas SQL complexas para múltiplos formatos:
 * Suporta **Excel (.xlsx)** com formatação automática, **TSV (.txt)** e **Markdown (.md)**.
 * Permite o uso de `ATTACH DATABASE` para cruzar dados de múltiplos bancos via linha de comando.

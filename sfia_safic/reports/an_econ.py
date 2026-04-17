@@ -1,10 +1,11 @@
 """
 Relatório de Análises Econômicas — Receitas, Compras, Ativo, Entradas/Saídas.
 """
-from ._helpers import executar_e_formatar
+from ._helpers import executar_e_formatar, set_debug
 
-def iniciar_relatorio_com_indice(out_path, titulo):
+def iniciar_relatorio_com_indice(out_path, titulo, debug=False): # <--- ADICIONADO debug
     """Cria o arquivo do relatório com o título, link para o menu e um Índice Interativo."""
+    set_debug(debug) # <--- CONFIGURA O ESTADO GLOBAL PARA ESTE RELATÓRIO
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(f"# {titulo}\n\n")
         f.write("#### Link para o menu de relatórios: [Menu de relatórios](menu_relatorios.html)\n\n")
@@ -32,9 +33,10 @@ def iniciar_relatorio_com_indice(out_path, titulo):
         f.write("---\n\n")
 
 
-def gerar_rel_an_econ(cursor, out_path):
-    iniciar_relatorio_com_indice(out_path, "Análises Econômicas")
-
+def gerar_rel_an_econ(cursor, out_path, debug=False):
+    iniciar_relatorio_com_indice(out_path, "Análises Econômicas", debug=debug)
+    set_debug(debug) # <--- CONFIGURA O ESTADO GLOBAL PARA ESTE RELATÓRIO 
+    
     # =========================================================================
     # PARTE 1: VISÃO RESUMIDA (TOP 20 + LINHA DEMAIS)
     # =========================================================================

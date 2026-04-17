@@ -4,8 +4,8 @@ Relatório de Exportação de Dados — amostras de tabelas e views úteis.
 from ._helpers import executar_e_formatar, iniciar_relatorio
 
 
-def gerar_rel_exp_dados(cursor, out_path, limite=2):
-    iniciar_relatorio(out_path, "Amostras de Exportações de Dados Úteis")
+def gerar_rel_exp_dados(cursor, out_path, limite=2, debug=False):
+    iniciar_relatorio(out_path, "Amostras de Exportações de Dados Úteis", debug=debug)
 
     executar_e_formatar(f"SELECT * FROM chaveNroTudao LIMIT {limite}", cursor, out_path, "Tabela sia.chaveNroTudao")
 

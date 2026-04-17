@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 from builder import construir_banco_sia
 from reporter import gerar_relatorios
-from reporter import gerar_relatorio_operacoes
+from reporter import gerar_relatorio_operacoes, gerar_relatorio_itens
 
 def main():
     parser = argparse.ArgumentParser(description="Gerador do Banco SIA e Relatórios.")
@@ -27,8 +27,11 @@ def main():
     p_item = subparsers.add_parser("report_item", help="Gera o relatório de itens (rel_item.md) com aceleração via tabela item{osf}.sqlite.")
     p_item.add_argument("--dir", required=True, help="Pasta com os bancos de dados")
 
-    args = parser.parse_args()
+    for p in [p_report, p_oper, p_item]:
+        p.add_argument("--debug", action="store_true", help="Inclui metadados e SQL nos relatórios.")
 
+    args = parser.parse_args()
+    
     if args.command == "build":
         src_path = Path(args.src).resolve()
         out_path = Path(args.out).resolve()
@@ -59,13 +62,12 @@ def main():
 
         print(f"📊 Bancos encontrados para relatório:\n ➔ OSF: {db_osf.name}\n ➔ SIA: {db_sia.name}")
         if args.command == "report":
-            gerar_relatorios(str(db_osf), str(db_sia), target_dir)
+            gerar_relatorios(str(db_osf), str(db_sia), target_dir, debug=args.debug)
         elif args.command == "report_oper":
-            from reporter import gerar_relatorio_operacoes
-            gerar_relatorio_operacoes(str(db_osf), str(db_sia), target_dir)
+            gerar_relatorio_operacoes(str(db_osf), str(db_sia), target_dir, debug=args.debug)
         elif args.command == "report_item":
-            from reporter import gerar_relatorio_itens
-            gerar_relatorio_itens(str(db_osf), str(db_sia), target_dir)
+            gerar_relatorio_itens(str(db_osf), str(db_sia), target_dir, debug=args.debug)
+
 
 if __name__ == "__main__":
     main()

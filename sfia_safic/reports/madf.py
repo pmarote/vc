@@ -4,8 +4,8 @@ Relatório MADF — Movimento Anual de Documentos Fiscais (GIA x EFD por CFOP).
 from ._helpers import executar_e_formatar, iniciar_relatorio
 
 
-def gerar_rel_madf(cursor, out_path):
-    iniciar_relatorio(out_path, "Relatório MADF")
+def gerar_rel_madf(cursor, out_path, debug=False):
+    iniciar_relatorio(out_path, "Relatório MADF", debug=debug)
     where = "1 = 1"
 
     executar_e_formatar(f"""

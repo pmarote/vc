@@ -4,8 +4,8 @@ Relatório de Dados Básicos — GIAs, SPEDs, Conta Fiscal, etc.
 from ._helpers import executar_e_formatar, iniciar_relatorio
 
 
-def gerar_rel_basicos(cursor, out_path, num_osf):
-    iniciar_relatorio(out_path, "Relatório de Dados Básicos")
+def gerar_rel_basicos(cursor, out_path, num_osf, debug=False):
+    iniciar_relatorio(out_path, "Relatório de Dados Básicos", debug=debug)
     where = "1 = 1"
 
     cursor.execute("SELECT min(referencia) AS dtamin, max(referencia) AS dtamax FROM _imp_ReferenciasSelecionadasNaImportacao;")

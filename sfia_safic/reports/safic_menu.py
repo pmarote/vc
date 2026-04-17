@@ -4,8 +4,8 @@ Relatório Safic Menu — resumo por classificação (idClassificacao).
 from ._helpers import executar_e_formatar, iniciar_relatorio
 
 
-def gerar_rel_safic_menu(cursor, out_path):
-    iniciar_relatorio(out_path, "Análises do Safic")
+def gerar_rel_safic_menu(cursor, out_path, debug=False):
+    iniciar_relatorio(out_path, "Análises do Safic", debug=debug)
     where = "1 = 1"
 
     executar_e_formatar(f"""

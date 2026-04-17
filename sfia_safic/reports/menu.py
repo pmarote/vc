@@ -2,7 +2,7 @@
 import os
 from pathlib import Path
 
-def gerar_menu_interativo(cursor, out_path: Path, num_osf: str):
+def gerar_menu_interativo(cursor, out_path: Path, num_osf: str, debug=False):
     """
     Gera um Menu HTML Standalone com área editável para o auditor.
     """
