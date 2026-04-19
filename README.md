@@ -90,8 +90,9 @@ A inteligência fiscal. Orquestra a execução da auditoria:
 
 ### 3. [sfiaweb] - Interface Dinâmica
 Um servidor FastAPI ultraleve servindo uma interface web moderna:
-* **Leitura Direta**: Consome arquivos .md gerados pelas auditorias diretamente do Drive de trabalho.
-* **Anotações Inteligentes**: Permite edição ao vivo do relatório gerado com auto-salvamento (Ctrl+S).
+* **Servidor web estilo Explorer** para navegação em arquivos de auditoria e visualização de relatórios Markdown e outros.
+* **Comandos via interface web**(TODO): Meio que o Webmin faz para a configuração linux.
+* **Anotações Inteligentes**(TODO): Permite edição ao vivo do relatório gerado com auto-salvamento (Ctrl+S).
 
 ### 4. [ollama_analyst] - Análise de IA Local
 Microapp dedicado a extrair insights de auditoria usando inteligência artificial:
@@ -118,9 +119,13 @@ Permite extrair resultados de consultas SQL complexas para múltiplos formatos:
 ## 🚀 Como Iniciar
 
 1. Clone o repositório.
-2. Execute o arquivo `terminal.bat` na raiz.
+2. Execute o arquivo `terminal.bat` na raiz. Leia com atenção as instruções que aparecerão.
 3. Use os comandos configurados. Exemplos:
    ```bash
+    # Agora com navegação rápida criada com DOSKEY no terminal.bat:
+    utils   # Lista as ferramentas em utils
+    ...
+
    # Gerar banco de custeio
    vc sfia_credAcCust main.py build --src ../data/BI_Excel --out ../var/siaCredAc.sqlite
 

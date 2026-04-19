@@ -22,13 +22,13 @@ except ImportError as e:
     export_excel = None
     export_tsv = None
 
-def gerar_rel_item(cursor, out_path, debug=False):
+# Adicionado dbs_dir e xls_dir
+def gerar_rel_item(cursor, out_path, dbs_dir: Path, xls_dir: Path, debug=False):
 
     iniciar_relatorio(out_path, "Relatório de Itens", debug=debug)
 
-    # Define o caminho do novo banco de dados analítico na pasta --dir
-    dir_out = Path(out_path).parent
-    db_item_path = dir_out / "item_base.sqlite"
+    # O banco de dados agora vai para a pasta _dbs
+    db_item_path = dbs_dir / "item_base.sqlite"
     
     print(" ➔ Criando visualização temporária no disco...")
 
@@ -466,23 +466,16 @@ def gerar_rel_item(cursor, out_path, debug=False):
     # --- EXPORTAÇÃO DOS ARQUIVOS FÍSICOS (.XLSX e .TXT) ---
     # =========================================================================
     if export_excel and export_tsv:
-        dir_out = Path(out_path).parent # Pasta de destino baseada no parametro --dir
-        
-        # 1. Exportar XLSX (Amostra 10k)
-        xlsx_path = dir_out / "item_base.xlsx"
+        # A planilha agora vai para a pasta _xls
+        xlsx_path = xls_dir / "item_base.xlsx"
         print(f" ➔ Exportando amostra para Excel (1.000 linhas) em {xlsx_path.name}...")
         cursor.execute("SELECT * FROM item_db.item_base LIMIT 1000")
         linhas_xlsx = export_excel(cursor, xlsx_path)
         print(f"    [OK] {linhas_xlsx} linhas exportadas.")
 
-        # 2. Exportar TXT Completo
-        txt_path = dir_out / "item_base.txt"
+        txt_path = xls_dir / "item_base.txt"
         print(f" ➔ Na versão anterior, era exportado base completa para TXT (separado por tabulação) em {txt_path.name}...")
-        print(f"    [OK] Agora não faço mais isso, eu simplesmente deixo um sqlite pronto em {dir_out}/item_base.sqlite com a tabela item_base...")
+        print(f"    [OK] Agora não faço mais isso, eu simplesmente deixo um sqlite pronto em {dbs_dir}/item_base.sqlite com a tabela item_base...")
         # cursor.execute("SELECT * FROM _tmp_item_base")
         # linhas_txt = export_tsv(cursor, txt_path)
         # print(f"    [OK] {linhas_txt} linhas exportadas.")
-
-    # Não é estritamente necessário dar DROP pois o SQLite limpa ao fechar, 
-    # mas é boa prática para libertar o ficheiro temporário de sistema o quanto antes.
-    # cursor.execute("DROP TABLE IF EXISTS temp._tmp_item_base;")

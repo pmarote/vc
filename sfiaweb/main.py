@@ -1,14 +1,28 @@
-# sfiaweb/main.py
-"""
-sfiaweb — Interface web local para auditoria fiscal.
-Motor: FastAPI servindo relatórios .md e executando gatilhos.
-
-Uso:
-  uv run main.py serve
-  uv run main.py serve --port 5678
-"""
 import argparse
 import sys
+import tomllib
+from pathlib import Path
+
+# Resolve o caminho da raiz do projeto (vc/)
+ROOT_DIR = Path(__file__).resolve().parent.parent
+CONFIG_FILE = ROOT_DIR / "var" / "sfia_config.toml"
+
+def validar_ambiente():
+    """Verifica se a pasta de trabalho existe."""
+    if not CONFIG_FILE.exists():
+        print(f"\n❌ ERRO: Arquivo de configuração não encontrado em: {CONFIG_FILE}")
+        print("💡 DICA: Você precisa rodar o 'build' no microapp 'sfia_safic' primeiro.")
+        sys.exit(1)
+    
+    with open(CONFIG_FILE, "rb") as f:
+        config = tomllib.load(f)
+        work_dir = Path(config.get("work_dir", ""))
+        
+        if not work_dir.exists():
+            print(f"\n❌ ERRO: A pasta raiz '{work_dir}' não foi encontrada.")
+            sys.exit(1)
+    
+    return True
 
 def main():
     parser = argparse.ArgumentParser(description="VC - sfiaweb (Servidor de Interface e Relatórios)")

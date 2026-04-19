@@ -1,9 +1,9 @@
 ---
 name: vc
-version: "0.4.5"
+version: "0.4.6"
 type: monorepo
 stack: python, sqlite, uv, markdown, html
-os: windows
+os: windows, linux
 ---
 
 # VC — Vibe Coding Microapps
@@ -32,11 +32,12 @@ Para detalhes completos, leia o [README.md](README.md).
 
 | Pasta | Função |
 |---|---|
-| `sfia_safic/` | Build do banco SIA + relatórios SAFIC (OSF → SIA) |
-| `sfia_credAcCust/` | Relatórios e-CredAc Custeio (PowerBI → SQLite) |
-| `importador_safic/` | ETL: MDF/SQL Server → SQLite OSF (Windows only, pywin32) |
-| `exportador/` | Query SQLite → Excel / MD / TSV |
-| `utils/` | dump_code, sqlite2md, md2html |
+| `sfia_safic/` | Build do banco SIA + relatórios SAFIC (OSF → SIA) | Linux/Win |
+| `sfia_credAcCust/` | Relatórios e-CredAc Custeio (PowerBI → SQLite) | Linux/Win |
+| `importador_safic/` | ETL: MDF/SQL Server → SQLite OSF | **Windows Only** |
+| `exportador/` | Query SQLite → Excel / MD / TSV | Linux/Win |
+| `utils/` | dump_code, sqlite2md, md2html | Linux/Win |
+| `sfiaweb/` | Servidor local FastAPI para relatórios | Linux/Win |
 
 ---
 
@@ -44,25 +45,22 @@ Para detalhes completos, leia o [README.md](README.md).
 
 **Fazer:**
 - Usar `uv run` sempre, nunca `python` direto
-- Cada microapp é editado de forma isolada — não criar dependências entre pastas
+- Cada microapp é editado de forma isolada
 - Arquivos temporários e logs gravados em `var/` (ignorada pelo git)
+- Manter o isolamento: alterações num microapp não devem afetar o `pyproject.toml` de outro.
 - Imports entre módulos do mesmo microapp usam caminhos relativos simples
-- `sfia_safic/reports/` contém os reporters individuais; o orquestrador é `reporter.py`
 
 **Não fazer:**
 - Não criar `config.toml` na raiz (foi removido intencionalmente)
+- Não sugerir instalação global de pacotes (sempre via `uv add`).
 - Não instalar pacotes globalmente; sempre adicionar em `pyproject.toml` do microapp
-- Não misturar lógica de relatório dentro de `builder.py`
-- Não usar `pandas` no `exportador` (ele usa apenas `sqlite3` + `openpyxl`), porque `pandas` adiciona muita complexidade que não precisa no `exportador`
-- Não sugerir migrações para banco relacional externo ou ORM
 
 ---
 
-## Entrypoint rápido
+## Entrypoint rápido (exemplo para Windows)
 
 ```bat
 terminal.bat          # abre o terminal com os doskeys configurados
-menu                  # abre menu_relatorios.html no navegador
 vc sfia_safic main.py report --dir ../var
 exp --db var/sia.sqlite --sql query.sql --out resultado.xlsx
 ```

@@ -22,13 +22,16 @@ except ImportError as e:
     export_excel = None
     export_tsv = None
 
-def gerar_rel_oper(cursor, out_path, debug=False):
+
+
+
+# Adicionado dbs_dir e xls_dir
+def gerar_rel_oper(cursor, out_path, dbs_dir: Path, xls_dir: Path, debug=False):
 
     iniciar_relatorio(out_path, "Relatório de Operações", debug=debug)
 
-    # Define o caminho do novo banco de dados analítico na pasta --dir
-    dir_out = Path(out_path).parent
-    db_oper_path = dir_out / "oper_base.sqlite"
+    # O banco de dados agora vai para a pasta _dbs
+    db_oper_path = dbs_dir / "oper_base.sqlite"
     
     print(" ➔ Criando visualização temporária no disco...")
 
@@ -261,27 +264,18 @@ def gerar_rel_oper(cursor, out_path, debug=False):
             ABS(SUM(valcon)) DESC
     """, cursor, out_path, "Resumo por tp_origem, g1, Top 6 abs(es_valcon) + Outras (Apenas Documentos Válidos), com tp_uf, clAliqIcms e redBCICMS")
 
+
     # =========================================================================
     # --- EXPORTAÇÃO DOS ARQUIVOS FÍSICOS (.XLSX e .TXT) ---
     # =========================================================================
     if export_excel and export_tsv:
-        dir_out = Path(out_path).parent # Pasta de destino baseada no parametro --dir
-        
-        # 1. Exportar XLSX (Amostra 10k)
-        xlsx_path = dir_out / "oper_base.xlsx"
+        # A planilha agora vai para a pasta _xls
+        xlsx_path = xls_dir / "oper_base.xlsx"
         print(f" ➔ Exportando amostra para Excel (1.000 linhas) em {xlsx_path.name}...")
         cursor.execute("SELECT * FROM oper_db.oper_base LIMIT 1000")
         linhas_xlsx = export_excel(cursor, xlsx_path)
         print(f"    [OK] {linhas_xlsx} linhas exportadas.")
 
-        # 2. Exportar TXT Completo
-        txt_path = dir_out / "oper_base.txt"
+        txt_path = xls_dir / "oper_base.txt"
         print(f" ➔ Na versão anterior, era exportado base completa para TXT (separado por tabulação) em {txt_path.name}...")
-        print(f"    [OK] Agora não faço mais isso, eu simplesmente deixo um sqlite pronto em {dir_out}/oper_base.sqlite com a tabela oper_base...")
-        # cursor.execute("SELECT * FROM oper_db.oper_base")
-        # linhas_txt = export_tsv(cursor, txt_path)
-        # print(f"    [OK] {linhas_txt} linhas exportadas.")
-
-    # Não é estritamente necessário dar DROP pois o SQLite limpa ao fechar, 
-    # mas é boa prática para libertar o ficheiro temporário de sistema o quanto antes.
-    # cursor.execute("DROP TABLE IF EXISTS temp._tmp_oper_base;")
+        print(f"    [OK] Agora não faço mais isso, eu simplesmente deixo um sqlite pronto em {dbs_dir}/oper_base.sqlite com a tabela oper_base...")

@@ -1,0 +1,17 @@
+[project]
+name = "vc"
+version = "0.4.6"
+description = "Vibe Coding Workspace - Microapps de Auditoria Fiscal"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    { name = "pmarote" }
+]
+# Sem dependências globais para manter a raiz limpa
+dependencies = []
+
+[tool.uv]
+managed = true
+package = false
+# A diretiva [tool.uv.workspace] foi intencionalmente removida
+# para garantir que cada microapp crie o seu próprio .venv isolado.

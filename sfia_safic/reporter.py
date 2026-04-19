@@ -18,26 +18,30 @@ from reports.safic_menu_det import gerar_rel_safic_menu_det
 from reports.oper          import gerar_rel_oper
 from reports.item          import gerar_rel_item
 
-def gerar_relatorios(db_osf: str, db_sia: str, target_dir: Path, debug: bool = False):
-    num_osf = re.sub(r'\D', '', os.path.basename(db_osf))
+def gerar_relatorios(db_osf: Path, db_sia: Path, target_dir: Path, xls_dir: Path, debug: bool = False):
+    db_osf = Path(db_osf)
+    target_dir = Path(target_dir)
+    
+    num_osf = re.sub(r'\D', '', db_osf.name)
     if not num_osf:
         num_osf = "0"
 
     print(f"🗄️ Conectando às bases e iniciando relatórios (OSF {num_osf})...")
     conn = sqlite3.connect(db_sia)
     cursor = conn.cursor()
-    cursor.execute(f"ATTACH DATABASE '{db_osf}' AS osf;")
+    # Usando as_posix() para segurança de rotas no Windows
+    cursor.execute(f"ATTACH DATABASE '{db_osf.as_posix()}' AS osf;")
 
     print(" ➔ Gerando Menu Interativo...")
     gerar_menu_interativo(cursor, str(target_dir / "menu_relatorios.html"), num_osf, debug=debug)
 
     print(" ➔ Gerando Relatório de Dados Básicos...")
     gerar_rel_basicos(cursor, str(target_dir / "rel_basicos.md"), num_osf, debug=debug)
-    
-    print(" ➔ Gerando Análises Econômicas...")
+
+    print(" ➔ Gerando Relatório de Análise Econômica...")
     gerar_rel_an_econ(cursor, str(target_dir / "rel_an_econ.md"), debug=debug)
 
-    print(" ➔ Gerando Relatórios de Conciliação...")
+    print(" ➔ Gerando Relatório de Conciliações...")
     gerar_rel_conc(cursor, str(target_dir / "rel_conc.md"), limite=5, debug=debug)
 
     print(" ➔ Gerando Exportações de Dados...")
@@ -50,29 +54,31 @@ def gerar_relatorios(db_osf: str, db_sia: str, target_dir: Path, debug: bool = F
     gerar_rel_safic_menu(cursor, str(target_dir / "rel_safic_menu.md"), debug=debug)
 
     print(" ➔ Gerando Safic Menu (Detalhes)...")
-    gerar_rel_safic_menu_det(cursor, str(target_dir / "rel_safic_menu_det.md"), debug=debug)
+    gerar_rel_safic_menu_det(cursor, str(target_dir / "rel_safic_menu_det.md"), xls_dir, debug=debug)
 
     conn.close()
-    print("✅ Todos os relatórios foram gerados com sucesso e guardados no diretório indicado!")
+    print("✅ Todos os relatórios foram gerados com sucesso!")
 
-def gerar_relatorio_operacoes(db_osf: str, db_sia: str, target_dir: Path, debug: bool = False):
+def gerar_relatorio_operacoes(db_osf: Path, db_sia: Path, target_dir: Path, dbs_dir: Path, xls_dir: Path, debug: bool = False):
     print(f"🚀 Gerando Relatório de Operações...")
     conn = sqlite3.connect(db_sia)
     cursor = conn.cursor()
-    cursor.execute(f"ATTACH DATABASE '{db_osf}' AS osf;")
+    cursor.execute(f"ATTACH DATABASE '{db_osf.as_posix()}' AS osf;")
 
-    gerar_rel_oper(cursor, str(target_dir / "rel_oper.md"), debug=debug)
+    # Repassa as pastas específicas para o relatório colocar cada arquivo no seu lugar
+    gerar_rel_oper(cursor, str(target_dir / "rel_oper.md"), dbs_dir, xls_dir, debug=debug)
     
     conn.close()
-    print(f"✅ Relatório rel_oper.md gerado em {target_dir}")
+    print(f"✅ Relatório rel_oper.md gerado com sucesso!")
 
-def gerar_relatorio_itens(db_osf: str, db_sia: str, target_dir: Path, debug: bool = False):
-    print(f"🚀 Preparando ambiente para Relatório de Itens...")
+def gerar_relatorio_itens(db_osf: Path, db_sia: Path, target_dir: Path, dbs_dir: Path, xls_dir: Path, debug: bool = False):
+    print(f"🚀 Gerando Relatório de Itens...")
     conn = sqlite3.connect(db_sia)
     cursor = conn.cursor()
-    cursor.execute(f"ATTACH DATABASE '{db_osf}' AS osf;")
+    cursor.execute(f"ATTACH DATABASE '{db_osf.as_posix()}' AS osf;")
 
-    gerar_rel_item(cursor, str(target_dir / "rel_item.md"), debug=debug)
+    # Repassa as pastas específicas para o relatório colocar cada arquivo no seu lugar
+    gerar_rel_item(cursor, str(target_dir / "rel_item.md"), dbs_dir, xls_dir, debug=debug)
     
     conn.close()
-    print(f"✅ Relatório rel_item.md gerado em {target_dir}")
+    print(f"✅ Relatório rel_item.md gerado com sucesso!")

@@ -188,7 +188,7 @@ def _executar_menu_det(cursor, out_path, classif, titulo, top_n="18", order_by="
         group_order_by=order_by
     )
 
-def gerar_rel_safic_menu_det(cursor, out_path, debug=False):
+def gerar_rel_safic_menu_det(cursor, out_path, xls_dir: Path, debug=False):
     iniciar_relatorio(out_path, "Análises do Safic - Detalhes", debug=debug)
 
     # =========================================================================
@@ -314,9 +314,9 @@ def gerar_rel_safic_menu_det(cursor, out_path, debug=False):
     if export_excel:
         dir_destino = Path(out_path).parent
         nome_ficheiro = "safic_menu_detalhes_completo.xlsx"
-        caminho_xlsx = dir_destino / nome_ficheiro
+        caminho_xlsx = xls_dir / nome_ficheiro
         
-        print(f" ➔ Gerando Excel Unificado de Detalhamento em {nome_ficheiro}...")
+        print(f" ➔ Gerando Excel Unificado de Detalhamento em {caminho_xlsx}...")
         try:
             # Note: Usamos 'rowid' nativo do SQLite (que é em minúsculas por padrão no DB)
             cursor.execute("""

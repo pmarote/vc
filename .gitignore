@@ -1,18 +1,36 @@
 # === Ambientes e Cache (Recursivo) ===
-# === Notas de Manutenção ===
 # Está feito dessa forma porque suporta múltiplos ambientes Python.
-
 **/__pycache__/
 **/*.py[cod]
 **/*$py.class
 **/.venv/
 **/.env
+**/.ipynb_checkpoints/
+
+# === Gestão de Pacotes - a ideia é sempre manter as pastas "limpas" ===
+# === 0.4.6+ - a regra é sempre recriar .venv do zero (não versionar o lock) ===
+**/uv.lock
 
 # === Dados e Bancos de Dados ===
 **/*.sqlite
+**/*.sqlite-journal
 **/data/
 **/var/
-**/TrabPaulo.xlsm
 
 # === Relatórios e Saídas ===
 **/rel_*.md
+
+# === Sistema Operacional (Cross-Platform) ===
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# === IDEs e Editores ===
+.vscode/
+.idea/
+*.swp
+*.bak

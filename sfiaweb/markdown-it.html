@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VC - Leitor de Relatórios e Skills</title>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it-emoji@2.0.2/dist/markdown-it-emoji.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it-footnote@3.0.3/dist/markdown-it-footnote.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it-task-lists@2.1.1/dist/markdown-it-task-lists.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it-mark@3.0.1/dist/markdown-it-mark.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({ startOnLoad: false, theme: 'default' });</script>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --link-color: #0d6efd;
+            --border-color: #dee2e6;
+            --table-head-bg: #e9ecef;
+            --accent-color: #0d6efd;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            line-height: 1.6;
+            /* MELHORIA 1: LARGURA FULL */
+            width: 100%; /* Ocupa quase a tela toda, deixando uma margem de respiro */
+            max-width: none; 
+            margin: 0 auto;
+            padding: 10px;
+        }
+
+        .upload-zone {
+            display: none; /* <-- ADICIONADO: Inicia invisível para evitar o "piscar" */
+            border: 2px dashed var(--accent-color);
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            background: #fff;
+            margin-bottom: 30px;
+            transition: background 0.3s;
+            cursor: pointer;
+        }
+        .upload-zone:hover, .upload-zone.dragover { background: #e9ecef; }
+        .upload-zone input[type="file"] { display: none; }
+
+        #content {
+            background: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            display: none;
+        }
+
+        /* table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.9em; } */
+        /* th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; } */
+        /* th { background-color: var(--table-head-bg); font-weight: 600; } */
+        /* acima era como estavam, foi desativado */
+
+        /* Para fazer as tabelas respeitarem 100% da largura da tela e quebrarem o texto/números para */
+        /*  a linha de baixo (em vez de sumirem pela direita) */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            /* Deixamos o navegador calcular as larguras baseado no conteúdo */
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 2px;
+            text-align: left;
+            /* Força números e textos longos a quebrarem em vez de esticarem a tabela para fora da tela */
+            overflow-wrap: anywhere;
+            word-break: break-word; 
+        }
+        th { background: #f8f9fa; font-weight: 600; }
+
+
+
+        tr:nth-child(even) { background-color: #f8f9fa; }
+
+        .metadata-box {
+            background: #eef2f5;
+            border-left: 4px solid var(--accent-color);
+            padding: 15px 20px;
+            margin-bottom: 30px;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.9em;
+        }
+        .metadata-box h3 { margin-top: 0; color: var(--accent-color); }
+        .metadata-box table { margin: 0; }
+        .metadata-box th, .metadata-box td { padding: 6px 12px; border: none; border-bottom: 1px solid #ddd; }
+        
+        h1, h2, h3 { border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
+        code { background: #f1f3f5; padding: 2px 5px; border-radius: 4px; font-family: monospace; }
+        pre code { display: block; padding: 15px; overflow-x: auto; background: #212529; color: #f8f9fa; }
+
+        /* Marca-texto */
+        mark { 
+            background-color: #fff59d; /* Amarelo caneta marca-texto */
+            padding: 2px 4px; 
+            border-radius: 3px; 
+            font-weight: 600; /* Deixa o texto grifado um pouco mais forte */
+            color: #000;
+        }
+        
+        /* Notas de Rodapé */
+        .footnotes-sep { margin-top: 40px; border-top: 1px solid var(--border-color); }
+        .footnotes { font-size: 0.85em; color: #555; }
+        
+        /* Listas de Tarefas */
+        .contains-task-list { list-style-type: none; padding-left: 0; }
+        .task-list-item input[type="checkbox"] { 
+            margin-right: 10px; 
+            transform: scale(1.2); /* Deixa o quadradinho maior e mais fácil de ler */
+            cursor: pointer;
+        }
+
+        /* MELHORIA 2: ESTILOS PARA CALLOUTS (ADMONITIONS) */
+        .callout {
+            border-left: 4px solid #448aff;
+            background-color: #f0f4ff;
+            padding: 15px 15px 15px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .callout-title { font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; color: #448aff;}
+        
+        /* Cores dinâmicas baseadas no tipo de aviso */
+        .callout.callout-warning { border-color: #ff9100; background-color: #fff8e1; }
+        .callout.callout-warning .callout-title { color: #ff9100; }
+        .callout.callout-danger, .callout.callout-error, .callout.callout-critical { border-color: #ff5252; background-color: #ffebee; }
+        .callout.callout-danger .callout-title, .callout.callout-error .callout-title { color: #ff5252; }
+        .callout.callout-success { border-color: #00e676; background-color: #e8f5e9; }
+        .callout.callout-success .callout-title { color: #00e676; }
+        .callout.callout-note { border-color: #9e9e9e; background-color: #f5f5f5; }
+        .callout.callout-note .callout-title { color: #757575; }
+		/* info: Azul Claro */
+        .callout.callout-info { border-color: #00b0ff; background-color: #e3f2fd; }
+        .callout.callout-info .callout-title { color: #00b0ff; }
+        /* tip: Verde Água (Cyan) */
+        .callout.callout-tip { border-color: #00bfa5; background-color: #e0f2f1; }
+        .callout.callout-tip .callout-title { color: #00bfa5; }
+        /* question: Roxo */
+        .callout.callout-question { border-color: #9c27b0; background-color: #f3e5f5; }
+        .callout.callout-question .callout-title { color: #9c27b0; }
+        /* bug: Vermelho Forte */
+        .callout.callout-bug { border-color: #d32f2f; background-color: #ffebee; }
+        .callout.callout-bug .callout-title { color: #d32f2f; }
+        /* example: Índigo (Azul escuro/Roxo) */
+        .callout.callout-example { border-color: #3f51b5; background-color: #e8eaf6; }
+        .callout.callout-example .callout-title { color: #3f51b5; }
+        /* quote: Cinza Escuro com fonte itálica */
+        .callout.callout-quote { border-color: #9e9e9e; background-color: #fafafa; font-style: italic; }
+        .callout.callout-quote .callout-title { color: #616161; font-style: normal; }
+    </style>
+</head>
+<body>
+
+    <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <h2>📂 Arraste um arquivo .md aqui</h2>
+        <p>Ou clique para selecionar (Relatórios, SKILL.md, etc)</p>
+        <input type="file" id="fileInput" accept=".md">
+    </div>
+
+    <div id="content"></div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const contentDiv = document.getElementById('content');
+
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) processFile(e.dataTransfer.files[0]);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) processFile(e.target.files[0]);
+        });
+
+        function processFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                renderContent(text);
+                dropZone.style.display = 'none';
+                contentDiv.style.display = 'block';
+                document.title = file.name + " - VC Reader";
+            };
+            reader.readAsText(file);
+        }
+
+        function processarCallouts(text) {
+            const regex = /(?:^>[ \t]*.*(?:\r?\n|$))+/gm;
+            
+            return text.replace(regex, function(match) {
+                const linhas = match.split(/\r?\n/);
+                const primeiraLinha = linhas[0].match(/^>[ \t]*\[!([^\]]+)\](.*)/);
+                
+                if (!primeiraLinha) return match; 
+
+                const typeLower = primeiraLinha[1].toLowerCase();
+                const titleText = primeiraLinha[2].trim() || typeLower.charAt(0).toUpperCase() + typeLower.slice(1);
+                
+                const contentLines = linhas.slice(1)
+                                           .filter(line => line.trim() !== '' && line.trim() !== '>')
+                                           .map(line => line.replace(/^>[ \t]?/, ''));
+                
+                const content = contentLines.join('\n');
+                
+                return `\n<div class="callout callout-${typeLower}">\n<div class="callout-title">${titleText}</div>\n\n${content}\n\n</div>\n`;
+            });
+        }
+
+        function renderContent(text) {
+            // 1. Inicializa apenas o núcleo básico, que é garantido que funciona
+            let md = window.markdownit({ html: true, linkify: true, typographer: true });
+            
+            // Console de debug para você confirmar que os plugins carregaram na memória
+            console.log("Status dos Plugins:", {
+                Emoji: !!window.markdownitEmoji,
+                Footnote: !!window.markdownitFootnote,
+                TaskLists: !!window.markdownitTaskLists,
+                Mark: !!window.markdownitMark
+            });
+
+            // 2. Tenta carregar os plugins extras com segurança (SÓ carrega se existirem)
+            if (window.markdownitEmoji) md = md.use(window.markdownitEmoji);
+            if (window.markdownitFootnote) md = md.use(window.markdownitFootnote);
+            if (window.markdownitTaskLists) md = md.use(window.markdownitTaskLists, { enabled: true });
+            if (window.markdownitMark) md = md.use(window.markdownitMark);
+            
+            // 3. Roda o pré-processador de Callouts
+            text = processarCallouts(text);
+
+            // 4. Lida com o YAML e a renderização
+            if (text.startsWith('---')) {
+                const parts = text.split('---');
+                if (parts.length >= 3) {
+                    try {
+                        const doc = jsyaml.load(parts[1]);
+                        let metaHtml = "<div class='metadata-box'><h3>🏷️ Frontmatter (YAML)</h3><table>";
+                        for (const [key, value] of Object.entries(doc)) {
+                            metaHtml += `<tr><th>${key}</th><td>${typeof value === 'object' ? JSON.stringify(value) : value}</td></tr>`;
+                        }
+                        metaHtml += "</table></div>";
+                        
+                        contentDiv.innerHTML = metaHtml + md.render(parts.slice(2).join('---'));
+                    } catch (e) {
+                        console.warn("Erro ao fazer parse do YAML", e);
+                        contentDiv.innerHTML = md.render(text);
+                    }
+                }
+            } else {
+                contentDiv.innerHTML = md.render(text);
+            }
+
+            // 5. Aciona o desenhista de gráficos (se a biblioteca tiver carregado com segurança)
+            if (window.mermaid) {
+                setTimeout(() => { 
+                    try { mermaid.run({ querySelector: '.language-mermaid' }); } 
+                    catch(e) { console.warn("Nenhum gráfico Mermaid encontrado ou falha na renderização."); }
+                }, 100);
+            }
+        }
+
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const fileUrl = urlParams.get('file');
+            
+            // Aviso amigável caso esteja usando arquivo local sem servidor
+            if (fileUrl) {
+                if (window.location.protocol === 'file:') {
+                    alert("Aviso de Segurança do Navegador:\nVocê não pode abrir o arquivo '" + fileUrl + "' diretamente pela URL em um arquivo local (file://).\n\nUse o recurso de arrastar o arquivo para dentro da tela ou abra via script Python (localhost)!");
+                    return;
+                }
+                
+                fetch(fileUrl)
+                    .then(response => {
+                        if (!response.ok) throw new Error("Arquivo não encontrado");
+                        return response.text();
+                    })
+                    .then(text => {
+                        renderContent(text);
+                        // A div de upload já está invisível devido ao CSS, mas mantemos por precaução
+                        dropZone.style.display = 'none'; 
+                        contentDiv.style.display = 'block';
+                    })
+                    .catch(err => {
+                        console.error("Erro ao carregar o arquivo via URL:", err);
+                    });
+            } else {
+                // <-- ADICIONADO: Se a URL não tiver ficheiro, ligamos a zona de upload
+                dropZone.style.display = 'block'; 
+            }
+        };
+    </script>
+</body>
+</html>

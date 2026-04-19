@@ -136,3 +136,34 @@ def run_sqlite_dump(db_path: Path, dst_path: Path, limit: int = 5, name_pattern:
 
     finally:
         conn.close()
+
+if __name__ == "__main__":
+    import argparse
+    
+    # Resolve o caminho da raiz do projeto (sobe um nível de 'utils' para 'vc')
+    ROOT_DIR = Path(__file__).resolve().parent.parent
+    VAR_DIR = ROOT_DIR / "var"
+    VAR_DIR.mkdir(parents=True, exist_ok=True)
+    
+    parser = argparse.ArgumentParser(description="Gera relatório Markdown completo de um banco de dados SQLite.")
+    parser.add_argument("--src", required=True, help="Caminho para o arquivo .db3 ou .sqlite de origem (obrigatório)")
+    parser.add_argument("--dst", default=str(VAR_DIR / "relatorio_banco.md"), help="Arquivo .md de saída (padrão: var/relatorio_banco.md)")
+    parser.add_argument("--limit", type=int, default=5, help="Número de linhas de amostra por tabela (padrão=5)")
+    parser.add_argument("--name", help="Filtra tabelas/views por nome (aceita %% como curinga, ex: cfop%%)")
+    
+    args = parser.parse_args()
+    
+    src_path = Path(args.src).resolve()
+    dst_path = Path(args.dst).resolve()
+    
+    if not src_path.exists():
+        print(f"❌ Erro: O banco de dados '{src_path}' não foi encontrado.")
+        sys.exit(1)
+        
+    print(f"🗄️ Inspecionando banco SQLite...")
+    print(f"   Origem:  {src_path}")
+    print(f"   Destino: {dst_path}")
+    
+    # NOTA: Adapte a chamada abaixo para o nome real da função principal
+    # que faz a geração e salva o arquivo dentro do seu sqlite_dump.py
+    # Exemplo: gerar_markdown_sqlite(src_path, dst_path, args.limit, args.name)

@@ -2,247 +2,179 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>VC - sfiaweb</title>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <title>VC - Workspace Explorer</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #fff; margin: 0; color: #212529; }
+        header { background: #1a1a2e; color: #fff; padding: 15px 20px; display: flex; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        /* Breadcrumbs da Raiz */
+        .breadcrumbs { flex: 1; font-size: 1.1em; display: flex; gap: 8px; align-items: center; }
+        .breadcrumbs a { color: #64b5f6; text-decoration: none; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+        .breadcrumbs a:hover { background: rgba(255,255,255,0.1); text-decoration: underline; }
+        .breadcrumbs span.sep { color: #888; }
+        .breadcrumbs span.current { color: #fff; padding: 2px 6px; }
 
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: #f0f2f5;
-            color: #212529;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* CABEÇALHO */
-        header {
-            background: #1a1a2e;
-            color: #e0e0e0;
-            padding: 10px 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            flex-shrink: 0;
-        }
-        header h1 { font-size: 1em; font-weight: 600; color: #fff; }
-        header span { font-size: 0.8em; color: #888; font-family: monospace; }
-
-        /* CORPO PRINCIPAL */
-        .container {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-        }
-
-        /* MENU LATERAL */
-        nav {
-            width: 240px;
-            background: #fff;
-            border-right: 1px solid #dee2e6;
-            overflow-y: auto;
-            flex-shrink: 0;
-            padding: 10px 0;
-        }
-        nav p.secao {
-            font-size: 0.7em;
-            font-weight: 700;
-            text-transform: uppercase;
-            color: #888;
-            padding: 10px 15px 5px;
-            letter-spacing: 0.05em;
-        }
-        nav a {
-            display: block;
-            padding: 8px 15px;
-            font-size: 0.85em;
-            color: #495057;
-            text-decoration: none;
-            border-left: 3px solid transparent;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        nav a:hover { background: #f8f9fa; color: #212529; }
-        nav a.ativo {
-            border-left-color: #0d6efd;
-            background: #e8f0fe;
-            color: #0d6efd;
-            font-weight: 600;
-        }
-
-        /* ÁREA PRINCIPAL */
-        main {
-            flex: 1;
-            overflow-y: auto;
-            padding: 40px;
-            background: #fff;
-        }
-
-        /* ESTADO INICIAL */
-        .placeholder {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: #adb5bd;
-            gap: 10px;
-        }
-        .placeholder p { font-size: 0.9em; }
-
-        /* CONTEÚDO MD RENDERIZADO */
-        #conteudo { outline: none; }
-        #conteudo h1, #conteudo h2, #conteudo h3 {
-            border-bottom: 1px solid #dee2e6;
-            padding-bottom: 6px;
-            margin: 24px 0 12px;
-        }
-        #conteudo h1 { font-size: 1.6em; }
-        #conteudo h2 { font-size: 1.3em; }
-        #conteudo h3 { font-size: 1.1em; }
-        #conteudo p { margin-bottom: 12px; line-height: 1.7; }
-        #conteudo table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 16px 0;
-            font-size: 0.85em;
-        }
-        #conteudo th, #conteudo td {
-            border: 1px solid #dee2e6;
-            padding: 8px 12px;
-            text-align: left;
-        }
-        #conteudo th { background: #f1f3f5; font-weight: 600; }
-        #conteudo tr:nth-child(even) { background: #f8f9fa; }
-        #conteudo code {
-            background: #f1f3f5;
-            padding: 2px 5px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 0.9em;
-        }
-        #conteudo pre code {
-            display: block;
-            padding: 15px;
-            overflow-x: auto;
-            background: #212529;
-            color: #f8f9fa;
-            border-radius: 6px;
-        }
-        #conteudo details {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 5px;
-            padding: 10px;
-            margin-bottom: 12px;
-        }
-        #conteudo summary { cursor: pointer; font-weight: 600; }
-        #conteudo blockquote {
-            border-left: 4px solid #dee2e6;
-            padding-left: 15px;
-            color: #6c757d;
-            margin: 12px 0;
-        }
+        main { padding: 30px; max-width: 1400px; margin: auto; }
+        
+        /* Tabela estilo Windows Explorer */
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95em; }
+        th { border-bottom: 2px solid #ddd; padding: 12px; color: #666; font-weight: 600; cursor: default; }
+        td { padding: 10px 12px; border-bottom: 1px solid #eee; }
+        tr:hover td { background: #f8f9fa; }
+        
+        .icon { margin-right: 12px; font-size: 1.2em; display: inline-block; width: 20px; text-align: center; }
+        a.item-link { text-decoration: none; color: #333; display: flex; align-items: center; cursor: pointer; }
+        a.item-link:hover { color: #0d6efd; }
+        
+        .col-size, .col-date { color: #666; width: 180px; }
+        .msg-erro { color: #dc3545; padding: 20px; font-weight: bold; }
     </style>
 </head>
 <body>
-
-<header>
-    <h1>⚖️ VC - sfiaweb</h1>
-    <span id="dir-auditoria">carregando...</span>
-</header>
-
-<div class="container">
-    <nav id="menu">
-        <p class="secao">Relatórios</p>
-    </nav>
-
-    <main id="area-principal">
-        <div class="placeholder">
-            <p>← Selecione um relatório no menu</p>
-        </div>
+    <header>
+        <div class="breadcrumbs" id="breadcrumbs">
+            </div>
+        <button onclick="desligarServidor()" style="background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.9em; display: flex; align-items: center; gap: 8px; transition: background 0.2s;">
+            ⏹️ Desligar Servidor
+        </button>
+    </header>
+    <main>
+        <table>
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th class="col-date">Data de Modificação</th>
+                    <th class="col-size">Tamanho</th>
+                </tr>
+            </thead>
+            <tbody id="file-list">
+                <tr><td colspan="3">Carregando...</td></tr>
+            </tbody>
+        </table>
     </main>
-</div>
 
-<script>
-    const menu = document.getElementById('menu');
-    const areaPrincipal = document.getElementById('area-principal');
-    const dirAuditoria = document.getElementById('dir-auditoria');
+    <script>
+        const fileListEl = document.getElementById('file-list');
+        const breadcrumbsEl = document.getElementById('breadcrumbs');
 
-    // Carrega o dir do TOML no cabeçalho
-    async function carregarConfig() {
-        try {
-            const res = await fetch('/api/config');
-            const data = await res.json();
-            dirAuditoria.textContent = data.dir || '';
-        } catch {
-            dirAuditoria.textContent = 'erro ao ler config';
+        // Pega a rota atual a partir do hash da URL (Ex: #/_mds)
+        function getCurrentPath() {
+            let hash = window.location.hash.substring(1);
+            if (hash.startsWith('/')) hash = hash.substring(1);
+            return decodeURIComponent(hash);
         }
-    }
 
-    // Carrega a lista de .md e monta o menu
-    async function carregarMenu() {
-        try {
-            const res = await fetch('/api/relatorios');
-            const data = await res.json();
-
-            data.relatorios.forEach(rel => {
-                const a = document.createElement('a');
-                a.href = '#';
-                a.textContent = rel.nome.replace('.md', '');
-                a.dataset.nome = rel.nome;
-                a.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    carregarRelatorio(rel.nome, a);
-                });
-                menu.appendChild(a);
+        // Renderiza a navegação superior (Breadcrumbs)
+        function renderBreadcrumbs(path) {
+            const parts = path.split('/').filter(p => p);
+            let html = `<a href="#/">🏠 Raiz da Auditoria</a>`;
+            
+            let currentAccumulatedPath = "";
+            parts.forEach((part, index) => {
+                currentAccumulatedPath += "/" + part;
+                html += `<span class="sep">/</span>`;
+                if (index === parts.length - 1) {
+                    html += `<span class="current">${part}</span>`; // Pasta atual (sem link)
+                } else {
+                    html += `<a href="#${currentAccumulatedPath}">${part}</a>`; // Pastas anteriores
+                }
             });
-        } catch (e) {
-            menu.innerHTML += `<p style="padding:10px;color:red;font-size:0.8em;">Erro ao carregar lista</p>`;
+            breadcrumbsEl.innerHTML = html;
         }
-    }
 
-    // Carrega e renderiza um .md
-    async function carregarRelatorio(nome, linkEl) {
-        // Marca o item ativo no menu
-        document.querySelectorAll('nav a').forEach(a => a.classList.remove('ativo'));
-        linkEl.classList.add('ativo');
-
-        areaPrincipal.innerHTML = '<div class="placeholder"><p>Carregando...</p></div>';
-
-        try {
-            const res = await fetch(`/api/relatorios/${nome}`);
-            const data = await res.json();
-
-            // Renderiza o Markdown e injeta na área principal com contenteditable
-            const html = marked.parse(data.conteudo);
-            areaPrincipal.innerHTML = `<div id="conteudo" contenteditable="true">${html}</div>`;
-
-        } catch (e) {
-            areaPrincipal.innerHTML = `<div class="placeholder"><p style="color:red">Erro ao carregar ${nome}</p></div>`;
+        // Gera a URL correta dependendo do tipo do arquivo
+        function getFileAction(item, currentPath) {
+            const fullPath = currentPath ? `${currentPath}/${item.name}` : item.name;
+            
+            if (item.is_dir) {
+                return `href="#/${fullPath}"`;
+            } else {
+                const ext = item.name.split('.').pop().toLowerCase();
+                
+                // MÁGICA: Se for MD, abre o markdown-it enviando a URL do arquivo bruto como ?file=
+                if (ext === 'md') {
+                    return `href="/md_viewer?file=/raw/${encodeURIComponent(fullPath)}" target="_blank"`;
+                } else {
+                    // Outros arquivos (HTML renderiza nativo, SQLite/Excel fazem download)
+                    return `href="/raw/${encodeURIComponent(fullPath)}" target="_blank"`;
+                }
+            }
         }
-    }
 
-    // Ctrl+S salva o HTML atual localmente
-    document.addEventListener('keydown', (e) => {
-        if (e.ctrlKey && e.key === 's') {
-            e.preventDefault();
-            const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'relatorio_anotado.html';
-            a.click();
-            URL.revokeObjectURL(url);
+        // Busca a lista de arquivos da API
+        async function carregarArquivos() {
+            const currentPath = getCurrentPath();
+            renderBreadcrumbs(currentPath);
+            fileListEl.innerHTML = '<tr><td colspan="3">Carregando...</td></tr>';
+
+            try {
+                const res = await fetch(`/api/ls/${encodeURIComponent(currentPath)}`);
+                if (!res.ok) throw new Error("Erro ao acessar a pasta. Verifique se ela existe.");
+                
+                const data = await res.json();
+                
+                if (data.items.length === 0) {
+                    fileListEl.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #888;">Esta pasta está vazia.</td></tr>';
+                    return;
+                }
+
+                let html = "";
+                
+                // Botão de "Voltar" (..) se não estiver na raiz
+                if (currentPath !== "") {
+                    const parentPath = currentPath.split('/').slice(0, -1).join('/');
+                    html += `
+                        <tr>
+                            <td><a class="item-link" href="#/${parentPath}"><span class="icon">📁</span>..</a></td>
+                            <td class="col-date">-</td>
+                            <td class="col-size">-</td>
+                        </tr>
+                    `;
+                }
+
+                data.items.forEach(item => {
+                    const icon = item.is_dir ? '📁' : (item.name.endsWith('.md') ? '📝' : (item.name.endsWith('.html') ? '🌐' : '📄'));
+                    const action = getFileAction(item, currentPath);
+                    
+                    html += `
+                        <tr>
+                            <td>
+                                <a class="item-link" ${action}>
+                                    <span class="icon">${icon}</span> ${item.name}
+                                </a>
+                            </td>
+                            <td class="col-date">${item.modified}</td>
+                            <td class="col-size">${item.size}</td>
+                        </tr>
+                    `;
+                });
+                
+                fileListEl.innerHTML = html;
+
+            } catch (error) {
+                fileListEl.innerHTML = `<tr><td colspan="3" class="msg-erro">Falha: ${error.message}</td></tr>`;
+            }
         }
-    });
 
-    // Inicializa
-    carregarConfig();
-    carregarMenu();
-</script>
+        // Escuta mudanças no hash (Botão voltar do navegador) para recarregar a lista
+        window.addEventListener('hashchange', carregarArquivos);
 
+        function desligarServidor() {
+            fetch('/api/shutdown', { method: 'POST' }).then(() => {
+                // Limpa a tela e avisa que já pode fechar a aba
+                document.body.innerHTML = `
+                    <div style="display:flex; justify-content:center; align-items:center; height:100vh; flex-direction:column; background:#f8f9fa;">
+                        <h2 style="color:#333; margin-bottom:10px;">💤 Servidor desligado com sucesso.</h2>
+                        <p style="color:#666;">O terminal foi liberado. Você já pode fechar esta aba.</p>
+                    </div>`;
+            }).catch(e => console.error("Erro ao desligar:", e));
+        }
+
+        // Carrega inicialmente
+        carregarArquivos();
+    </script>
+
+
+    </script>
 </body>
 </html>

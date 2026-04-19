@@ -1,9 +1,13 @@
 [project]
-name = "paulo-utils"
+name = "vc-utils"
 version = "0.1.0"
-description = "Utilitários de suporte para projetos Vibe Code"
+description = "Toolkit de suporte e utilitários compartilhados"
 requires-python = "==3.12.*"
 dependencies = [
     "requests",
-    "beautifulsoup4"
+    "beautifulsoup4",
+    "httpx"
 ]
+
+[tool.uv]
+managed = true

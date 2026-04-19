@@ -40,7 +40,7 @@ def gerar_menu_interativo(cursor, out_path: Path, num_osf: str, debug=False):
 
     <div class="painel">
         <h2>📝 Caderno de Notas do Auditor</h2>
-        Report básico básico para exportador:<br>uv run main.py --db {dir_out_path}\sia{num_osf}.sqlite --sql "SELECT * FROM chaveNroTudao WHERE ChNrClassifs LIKE '%[12]%' LIMIT 10000" --out F:\sef\result\13009149244_Nakano\chNrTd_12.xlsx --attach {dir_out_path}\osf{num_osf}.sqlite osf
+        Report básico básico para exportador:<br>uv run main.py --db {dir_out_path}\\sia{num_osf}.sqlite --sql "SELECT * FROM chaveNroTudao WHERE ChNrClassifs LIKE '%[12]%' LIMIT 10000" --out F:\\sef\\result\\13009149244_Nakano\\chNrTd_12.xlsx --attach {dir_out_path}\\osf{num_osf}.sqlite osf
         <span class="salvar-aviso">⚠️ Dica: Digite suas notas abaixo e aperte <b>Ctrl + S</b> no navegador para salvar este arquivo HTML localmente com as alterações.</span>
         <br>
         <div class="notas" contenteditable="true">

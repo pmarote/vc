@@ -1,18 +1,32 @@
 import sqlite3
 import pandas as pd
 import os
+from pathlib import Path
 
 def construir_banco_sia(db_osf, db_sia, excel_file):
+    # 1. Validação Defensiva (Garante que o Excel está na pasta certa)
+    if not os.path.exists(excel_file):
+        raise FileNotFoundError(f"❌ ERRO: Planilha de parâmetros não encontrada em: {excel_file}")
+
     if os.path.exists(db_sia):
         os.remove(db_sia)
+
+    # 2. Sanitização de Caminhos (Evita erros de escape no ATTACH do SQLite)
+    safe_db_osf = Path(db_osf).as_posix()
 
     conn = sqlite3.connect(db_sia)
     cursor = conn.cursor()
 
-    # Anexa o banco OSF
-    cursor.execute(f"ATTACH DATABASE '{db_osf}' AS osf;")
+    # 3. Turbinando a Performance do SQLite para o Build
+    # Desliga a gravação de segurança no disco para acelerar os INSERTs/CREATEs massivos
+    cursor.execute("PRAGMA journal_mode = OFF;")
+    cursor.execute("PRAGMA synchronous = 0;")
+    cursor.execute("PRAGMA cache_size = -1000000;") # Aloca ~1GB de RAM para o cache do SQLite
 
-    print("Importando abas do Excel...")
+    # Anexa o banco OSF usando o caminho seguro
+    cursor.execute(f"ATTACH DATABASE '{safe_db_osf}' AS osf;")
+
+    print(f" ➔ Importando abas do Excel ({Path(excel_file).name})...")
     df_cfopd = pd.read_excel(excel_file, sheet_name="cfopd")
     df_regorig = pd.read_excel(excel_file, sheet_name="regOrig")
     df_cfopentsai = pd.read_excel(excel_file, sheet_name="cfopEntSai")

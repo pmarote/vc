@@ -2,8 +2,33 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
-## [0.4.6] - 2026-04
+## [0.4.7] - 2026-04
 - versão em desenvolvimento
+
+## [0.4.6] - 2026-04-19
+
+### Arquitetura e Gestão de Ambiente
+- **Versionamento Centralizado:** Introdução do `pyproject.toml` na raiz para controle global da versão 0.4.6.
+- **Isolamento Total:** Configuração de `pyproject.toml` individuais por microapp, garantindo que o `uv` crie ambientes `.venv` isolados e sob demanda em cada pasta.
+- **Terminal Windows v0.4.6:** Refatoração do `terminal.bat` com suporte a caminhos absolutos (resolução de pasta pai), atalhos de navegação rápida (`root`, `utils`, `sfia`, etc.) e suporte a parâmetros `$*` para ferramentas externas (CudaText, DB Browser).
+
+### Microapp `utils` (Refatoração CLI)
+- **Orquestrador `main.py`:** Transformado em um seletor de ferramentas que não depende mais de arquivo de configuração fixo.
+- **Auto-explicação:** Novo comando `list` que executa automaticamente o `-h` de todos os scripts da pasta para apresentar as funcionalidades ao usuário.
+- **Scripts Independentes:** `dump_code.py` e `sqlite_dump.py` agora operam como CLIs autônomas com seus próprios argumentos de linha de comando.
+
+### Microapp `sfia_safic` (Pipeline Inteligente)
+- **Persistência de Contexto:** Criação do `sfia_config.toml` na pasta `var`, permitindo que o pipeline "lembre" da pasta de trabalho sem necessidade de repetir o parâmetro `--dir`.
+- **Estrutura Automática de Pastas:** Organização automática do workspace em subpastas prefixadas (`_dbs`, `_xls`, `_mds`).
+- **Movimentação Automática:** O sistema agora detecta o arquivo `osf*.sqlite` na raiz e o organiza automaticamente dentro de `_dbs/`.
+- **Performance no Builder:** Injeção de PRAGMAs de performance no SQLite e tratamento de caminhos cross-platform (Windows/Linux).
+
+### Microapp `sfiaweb` (Explorer & Viewer)
+- **File Explorer Web:** Transformação da interface em um navegador de arquivos completo, mostrando nome, data e tamanho.
+- **Navegação Restrita:** Implementada segurança para navegação apenas dentro do `work_dir` definido.
+- **Renderizador Integrado:** Integração do `markdown-it.html` para renderização fluida de arquivos `.md` com suporte a Mermaid, emojis e callouts.
+- **Otimização de UI:** Implementada quebra de linha inteligente em tabelas Markdown e eliminação de "piscadas" visuais durante o carregamento da interface.
+- **Gestão de Processo:** Adicionado botão de desligamento (Shutdown) do servidor via interface web.
 
 ## [0.4.5] - 2026-04-17
 

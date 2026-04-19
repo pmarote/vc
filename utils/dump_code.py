@@ -65,3 +65,30 @@ def run_dump(root_path: Path, dst_path: Path):
     dst_path.parent.mkdir(parents=True, exist_ok=True)
     dst_path.write_text("\n".join(parts), encoding="utf-8")
     print(f"[SUCESSO] Dump gerado em: {dst_path}")
+
+if __name__ == "__main__":
+    import argparse
+    
+    # Resolve o caminho da raiz do projeto (sobe um nível de 'utils' para 'vc')
+    ROOT_DIR = Path(__file__).resolve().parent.parent
+    VAR_DIR = ROOT_DIR / "var"
+    
+    # Garante que a pasta var existe para não dar erro ao salvar
+    VAR_DIR.mkdir(parents=True, exist_ok=True)
+    
+    parser = argparse.ArgumentParser(description="Gera consolidado Markdown de código-fonte para contexto de IA.")
+    parser.add_argument("--root", default=str(ROOT_DIR), help="Pasta raiz para iniciar a leitura (padrão: raiz do projeto)")
+    parser.add_argument("--dst", default=str(VAR_DIR / "contexto_projeto.md"), help="Arquivo de destino (padrão: var/contexto_projeto.md)")
+    
+    args = parser.parse_args()
+    
+    root_path = Path(args.root).resolve()
+    dst_path = Path(args.dst).resolve()
+    
+    print(f"🧠 Gerando dump do código...")
+    print(f"   Origem:  {root_path}")
+    print(f"   Destino: {dst_path}")
+    
+    # Chama a função principal existente no arquivo
+    run_dump(root_path, dst_path)
+    print("✅ Dump finalizado com sucesso!")

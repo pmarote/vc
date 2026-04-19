@@ -1,89 +1,118 @@
+import os
+import signal
 import uvicorn
 import tomllib
+import mimetypes
+from datetime import datetime
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 
-app = FastAPI(title="VC - sfiaweb")
+app = FastAPI(title="VC - Explorer")
 
-def ler_config_auditoria():
-    """Lê o diretório alvo a partir do TOML em var/"""
-    caminho_toml = Path(__file__).parent.parent / "var" / "config_auditoria.toml"
+# Resolve o caminho da raiz (vc/)
+ROOT_DIR = Path(__file__).resolve().parent.parent
+
+def get_work_dir() -> Path:
+    """Retorna o objeto Path da pasta raiz da auditoria."""
+    caminho_toml = ROOT_DIR / "var" / "sfia_config.toml"
     
     if not caminho_toml.exists():
-        raise FileNotFoundError(f"Arquivo de configuração não encontrado: {caminho_toml}")
+        raise HTTPException(status_code=500, detail="Configuração não encontrada.")
         
     with open(caminho_toml, "rb") as f:
-        return tomllib.load(f)
-
-def get_pasta_alvo() -> Path:
-    """Retorna o objeto Path da pasta da auditoria"""
-    config = ler_config_auditoria()
-    pasta_str = config.get("workspace", {}).get("dir")
-    if not pasta_str:
-        raise ValueError("O campo [workspace] dir não foi encontrado no TOML.")
-    
-    pasta_alvo = Path(pasta_str)
-    if not pasta_alvo.exists() or not pasta_alvo.is_dir():
-        raise FileNotFoundError(f"A pasta alvo não existe: {pasta_alvo}")
+        config = tomllib.load(f)
+        work_dir = config.get("work_dir")
+        if not work_dir:
+            raise HTTPException(status_code=500, detail="work_dir não definido no TOML.")
         
-    return pasta_alvo
+        pasta = Path(work_dir)
+        if not pasta.exists():
+            raise HTTPException(status_code=404, detail="Pasta de trabalho não encontrada.")
+            
+        return pasta.resolve()
 
-
-# --- ROTAS DA API ---
+def formatar_tamanho(size_bytes: int) -> str:
+    """Formata bytes para um texto legível."""
+    for unit in ['B', 'KB', 'MB', 'GB']:
+        if size_bytes < 1024.0:
+            return f"{size_bytes:.1f} {unit}"
+        size_bytes /= 1024.0
+    return f"{size_bytes:.1f} TB"
 
 @app.get("/", response_class=HTMLResponse)
 def ler_index():
-    """Entrega a interface frontend (index.html)"""
-    caminho_index = Path(__file__).parent / "index.html"
-    return caminho_index.read_text(encoding="utf-8")
+    """Entrega a interface do File Explorer."""
+    index_path = Path(__file__).parent / "index.html"
+    return index_path.read_text(encoding="utf-8")
 
+@app.get("/md_viewer", response_class=HTMLResponse)
+def ler_md_viewer():
+    """Entrega o renderizador de Markdown customizado pelo usuário."""
+    viewer_path = Path(__file__).parent / "markdown-it.html"
+    if not viewer_path.exists():
+        raise HTTPException(status_code=404, detail="Arquivo markdown-it.html não encontrado na pasta sfiaweb.")
+    return viewer_path.read_text(encoding="utf-8")
 
-@app.get("/api/relatorios")
-def listar_relatorios():
-    """Devolve a lista de arquivos .md disponíveis na auditoria atual"""
+@app.get("/api/ls/{subpath:path}")
+def listar_arquivos(subpath: str = ""):
+    """Lista diretórios e arquivos de um subpath, com bloqueio de segurança."""
     try:
-        pasta_alvo = get_pasta_alvo()
-        arquivos_md = []
+        base_dir = get_work_dir()
+        target_dir = (base_dir / subpath).resolve()
         
-        # Pega todos os arquivos .md e ordena pelo nome
-        for arquivo in sorted(pasta_alvo.glob("*.md")):
-            arquivos_md.append({
-                "nome": arquivo.name
+        # Segurança contra directory traversal (ex: subir além do work_dir com ../)
+        if not target_dir.is_relative_to(base_dir):
+            raise HTTPException(status_code=403, detail="Acesso negado para fora do Work Dir.")
+            
+        if not target_dir.exists() or not target_dir.is_dir():
+            raise HTTPException(status_code=404, detail="Pasta não encontrada.")
+
+        itens = []
+        for p in target_dir.iterdir():
+            stat = p.stat()
+            itens.append({
+                "name": p.name,
+                "is_dir": p.is_dir(),
+                "size": formatar_tamanho(stat.st_size) if p.is_file() else "",
+                "modified": datetime.fromtimestamp(stat.st_mtime).strftime("%d/%m/%Y %H:%M")
             })
-            
-        return {"status": "ok", "relatorios": arquivos_md}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/relatorios/{nome_arquivo}")
-def ler_relatorio(nome_arquivo: str):
-    """Devolve o conteúdo de um arquivo .md específico"""
-    try:
-        pasta_alvo = get_pasta_alvo()
-        caminho_arquivo = pasta_alvo / nome_arquivo
         
-        # Prevenção básica de segurança (evitar que usem ../../ para ler arquivos do sistema)
-        if not caminho_arquivo.resolve().is_relative_to(pasta_alvo.resolve()):
-            raise HTTPException(status_code=403, detail="Acesso negado fora do workspace.")
-            
-        if not caminho_arquivo.exists() or caminho_arquivo.suffix != '.md':
-            raise HTTPException(status_code=404, detail="Relatório não encontrado.")
-            
-        # Lê o arquivo usando UTF-8, o padrão do VC
-        conteudo = caminho_arquivo.read_text(encoding="utf-8")
+        # Ordena: Pastas primeiro, depois por nome alfabético
+        itens.sort(key=lambda x: (not x["is_dir"], x["name"].lower()))
         
-        return {"status": "ok", "nome": nome_arquivo, "conteudo": conteudo}
+        return {"status": "ok", "path": subpath, "items": itens}
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/raw/{subpath:path}")
+def ler_arquivo_raw(subpath: str):
+    """Serve arquivos físicos para download ou visualização (HTML)."""
+    try:
+        base_dir = get_work_dir()
+        target_file = (base_dir / subpath).resolve()
+        
+        if not target_file.is_relative_to(base_dir):
+            raise HTTPException(status_code=403, detail="Acesso negado.")
+        if not target_file.exists() or not target_file.is_file():
+            raise HTTPException(status_code=404, detail="Arquivo não encontrado.")
+            
+        media_type, _ = mimetypes.guess_type(target_file)
+        return FileResponse(target_file, media_type=media_type)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-# --- INICIALIZAÇÃO ---
+@app.post("/api/shutdown")
+def shutdown_server():
+    """Desliga o servidor Uvicorn enviando um sinal de interrupção."""
+    # O sinal SIGINT simula um "Ctrl+C" no terminal de forma amigável
+    os.kill(os.getpid(), signal.SIGINT)
+    return {"status": "ok", "message": "Desligando servidor..."}
 
 def start_server(port: int):
     print(f"🚀 Iniciando VC sfiaweb na porta {port}...")
-    # O reload=True é ótimo para desenvolver, se você alterar o server.py ele reinicia sozinho
-    uvicorn.run("server:app", host="127.0.0.1", port=port, reload=True)
+    uvicorn.run(app, host="127.0.0.1", port=port)
