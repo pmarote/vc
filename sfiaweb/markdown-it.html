@@ -3,307 +3,838 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VC - Leitor de Relatórios e Skills</title>
+    <title>VC - Leitor de Relatórios</title>
+
+    <!-- Tipografia: Lora (serif editorial) + Source Code Pro (mono) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Source+Code+Pro:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
     <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/markdown-it-emoji@2.0.2/dist/markdown-it-emoji.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/markdown-it-footnote@3.0.3/dist/markdown-it-footnote.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/markdown-it-task-lists@2.1.1/dist/markdown-it-task-lists.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/markdown-it-mark@3.0.1/dist/markdown-it-mark.min.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
     <script>mermaid.initialize({ startOnLoad: false, theme: 'default' });</script>
+
     <style>
+        /* ============================================================
+           TOKENS DE DESIGN — inspirados na tipografia editorial Claude
+           ============================================================ */
         :root {
-            --bg-color: #f8f9fa;
-            --text-color: #212529;
-            --link-color: #0d6efd;
-            --border-color: #dee2e6;
-            --table-head-bg: #e9ecef;
-            --accent-color: #0d6efd;
+            /* Tipografia */
+            --font-serif:  'Lora', 'Georgia', 'Times New Roman', serif;
+            --font-sans:   'Inter', 'Segoe UI', system-ui, sans-serif;
+            --font-mono:   'Source Code Pro', 'Cascadia Code', 'Consolas', monospace;
+
+            /* Escala tipográfica */
+            --text-base:   1.0625rem;   /* 17px — ligeiramente maior que o padrão */
+            --text-sm:     0.9rem;
+            --text-xs:     0.8rem;
+            --lh-text:     1.85;        /* linha generosa, editorial */
+            --lh-heading:  1.25;
+
+            /* Cores — modo claro */
+            --bg:          #faf9f7;     /* off-white levemente quente */
+            --surface:     #ffffff;
+            --text:        #1a1916;     /* preto quente, não puro */
+            --text-muted:  #6b6860;
+            --text-faint:  #9b9890;
+            --accent:      #185fa5;     /* azul Claude */
+            --accent-dim:  #0c447c;
+            --border:      rgba(0,0,0,0.10);
+            --border-mid:  rgba(0,0,0,0.15);
+            --code-bg:     #f3f1ec;
+            --code-border: rgba(0,0,0,0.08);
+            --pre-bg:      #1e1d1b;
+            --pre-text:    #e8e5de;
+            --mark-bg:     #fef3c7;
+            --mark-text:   #78350f;
+            --blockquote-border: #d6d0c8;
+            --blockquote-bg: #f7f5f0;
+            --table-head-bg: #f3f1ec;
+            --table-stripe: #faf9f7;
+            --navy:        #1a1a2e;
+            --navy-mid:    #16213e;
         }
+
+        /* ============================================================
+           RESET E BASE
+           ============================================================ */
+        *, *::before, *::after { box-sizing: border-box; }
 
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            color: var(--text-color);
-            background-color: var(--bg-color);
-            line-height: 1.6;
-            /* MELHORIA 1: LARGURA FULL */
-            width: 100%; /* Ocupa quase a tela toda, deixando uma margem de respiro */
-            max-width: none; 
-            margin: 0 auto;
-            padding: 10px;
+            font-family: var(--font-serif);
+            font-size: var(--text-base);
+            line-height: var(--lh-text);
+            color: var(--text);
+            background: var(--bg);
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
-        .upload-zone {
-            display: none; /* <-- ADICIONADO: Inicia invisível para evitar o "piscar" */
-            border: 2px dashed var(--accent-color);
-            border-radius: 8px;
-            padding: 40px;
-            text-align: center;
-            background: #fff;
-            margin-bottom: 30px;
-            transition: background 0.3s;
-            cursor: pointer;
+        /* ============================================================
+           TOOLBAR
+           ============================================================ */
+        #toolbar {
+            display: none;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--navy);
+            color: #e0ddd8;
+            padding: 0 20px;
+            height: 46px;
+            align-items: center;
+            gap: 14px;
+            font-family: var(--font-sans);
+            font-size: 0.82rem;
+            box-shadow: 0 1px 0 rgba(255,255,255,0.05), 0 2px 12px rgba(0,0,0,0.3);
         }
-        .upload-zone:hover, .upload-zone.dragover { background: #e9ecef; }
-        .upload-zone input[type="file"] { display: none; }
+        #toolbar.visible { display: flex; }
 
-        #content {
-            background: #fff;
-            padding: 10px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        #toolbar-filename {
+            flex: 1;
+            font-weight: 500;
+            color: #7fb8e8;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            letter-spacing: 0.01em;
+        }
+
+        #toolbar-hint {
+            color: #666;
+            font-size: 0.78rem;
+            letter-spacing: 0.02em;
+        }
+
+        #badge-edit {
+            background: #e67e22;
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.72rem;
+            padding: 2px 9px;
+            border-radius: 3px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
             display: none;
         }
+        #badge-edit.visible { display: inline-block; }
 
-        /* table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.9em; } */
-        /* th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; } */
-        /* th { background-color: var(--table-head-bg); font-weight: 600; } */
-        /* acima era como estavam, foi desativado */
+        #btn-toggle-edit {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #ccc;
+            padding: 4px 13px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: var(--font-sans);
+            font-size: 0.8rem;
+            transition: all 0.15s;
+        }
+        #btn-toggle-edit:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.3); }
+        #btn-toggle-edit.active { background: #e67e22; color: #fff; border-color: #e67e22; font-weight: 600; }
 
-        /* Para fazer as tabelas respeitarem 100% da largura da tela e quebrarem o texto/números para */
-        /*  a linha de baixo (em vez de sumirem pela direita) */
-        table {
+        #btn-download {
+            background: var(--accent);
+            border: none;
+            color: #fff;
+            padding: 5px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: var(--font-sans);
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: background 0.15s;
+        }
+        #btn-download:hover { background: var(--accent-dim); }
+
+        #save-flash {
+            position: fixed;
+            top: 54px;
+            right: 20px;
+            background: #15803d;
+            color: #fff;
+            padding: 9px 18px;
+            border-radius: 6px;
+            font-family: var(--font-sans);
+            font-size: 0.85rem;
+            font-weight: 500;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            z-index: 200;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        }
+        #save-flash.show { opacity: 1; }
+
+        /* ============================================================
+           DROP ZONE
+           ============================================================ */
+        #dropZone {
+            display: none;
+            border: 1.5px dashed var(--border-mid);
+            border-radius: 12px;
+            padding: 72px 48px;
+            text-align: center;
+            background: var(--surface);
+            margin: 48px auto;
+            max-width: 560px;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        #dropZone.show { display: block; }
+        #dropZone:hover, #dropZone.dragover {
+            background: #f0ede6;
+            border-color: var(--accent);
+        }
+        #dropZone input[type="file"] { display: none; }
+
+        #dropZone .drop-icon {
+            font-size: 2.5rem;
+            margin-bottom: 16px;
+            display: block;
+            opacity: 0.5;
+        }
+        #dropZone h2 {
+            font-family: var(--font-sans);
+            font-size: 1.05rem;
+            font-weight: 500;
+            color: var(--text);
+            margin: 0 0 8px;
+            border: none;
+            padding: 0;
+        }
+        #dropZone p {
+            font-family: var(--font-sans);
+            font-size: var(--text-sm);
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        /* ============================================================
+           ÁREA DE CONTEÚDO
+           ============================================================ */
+        #content {
+            display: none;
+            background: var(--surface);
+            padding: 10px 10px;
+            /* max-width: 780px;         largura editorial — não full width - pm retirei */
+            margin: 0 auto;
+
+        }
+        #content.show { display: block; }
+
+        #content[contenteditable="true"] {
+            outline: none;
+            border-left: 3px solid #e67e22;
+            padding-left: 53px;
+            cursor: text;
+        }
+
+        /* ============================================================
+           TIPOGRAFIA EDITORIAL — HEADINGS
+           ============================================================ */
+        #content h1 {
+            font-family: var(--font-serif);
+            font-size: 2rem;
+            font-weight: 600;
+            line-height: var(--lh-heading);
+            color: var(--text);
+            margin: 0 0 0.75em;
+            padding-bottom: 0.4em;
+            border-bottom: 1px solid var(--border);
+            letter-spacing: -0.02em;
+        }
+
+        #content h2 {
+            font-family: var(--font-serif);
+            font-size: 1.45rem;
+            font-weight: 600;
+            line-height: var(--lh-heading);
+            color: var(--text);
+            margin: 0.6em 0 0.6em;
+            padding-bottom: 0.3em;
+            border-bottom: 1px solid var(--border);
+            letter-spacing: -0.015em;
+        }
+
+        #content h3 {
+            font-family: var(--font-serif);
+            font-size: 1.15rem;
+            font-weight: 600;
+            line-height: var(--lh-heading);
+            color: var(--text);
+            margin: 0.8em 0 0.5em;
+            letter-spacing: -0.01em;
+        }
+
+        #content h4 {
+            font-family: var(--font-sans);
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin: 0.7em 0 0.4em;
+        }
+
+        /* ============================================================
+           TIPOGRAFIA — CORPO
+           ============================================================ */
+        #content p {
+            margin: 0 0 1.2em;
+            font-family: var(--font-serif);
+        }
+
+        #content a {
+            color: var(--accent);
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            text-decoration-thickness: 1px;
+        }
+        #content a:hover { color: var(--accent-dim); }
+
+        #content strong {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        #content em {
+            font-style: italic;
+        }
+
+        #content mark {
+            background: var(--mark-bg);
+            color: var(--mark-text);
+            padding: 0.1em 0.3em;
+            border-radius: 3px;
+            font-style: normal;
+        }
+
+        /* ============================================================
+           LISTAS
+           ============================================================ */
+        #content ul, #content ol {
+            margin: 0 0 1.2em 0;
+            padding-left: 1.6em;
+            font-family: var(--font-serif);
+        }
+
+        #content li {
+            margin-bottom: 0.4em;
+            line-height: var(--lh-text);
+        }
+
+        #content li > ul,
+        #content li > ol {
+            margin-top: 0.3em;
+            margin-bottom: 0.3em;
+        }
+
+        /* Task lists */
+        .contains-task-list { list-style-type: none; padding-left: 0.2em; }
+        .task-list-item { display: flex; gap: 0.5em; align-items: flex-start; }
+        .task-list-item input[type="checkbox"] {
+            margin-top: 0.35em;
+            accent-color: var(--accent);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        /* ============================================================
+           BLOCKQUOTE
+           ============================================================ */
+        #content blockquote {
+            margin: 0.8em 0;
+            padding: 0.3em 0.5em; /* era : 1em 1.4em; */
+            background: var(--blockquote-bg);
+            border-left: 3px solid var(--blockquote-border);
+            border-radius: 0 6px 6px 0;
+            font-style: italic;
+            color: var(--text-muted);
+        }
+
+        #content blockquote p { margin-bottom: 0; }
+        #content blockquote p + p { margin-top: 0.6em; }
+
+        /* ============================================================
+           CÓDIGO
+           ============================================================ */
+        #content code {
+            font-family: var(--font-mono);
+            font-size: 0.85em;
+            background: var(--code-bg);
+            color: #c0392b;
+            padding: 0.15em 0.45em;
+            border-radius: 4px;
+            border: 1px solid var(--code-border);
+        }
+
+        #content pre {
+            background: var(--pre-text); /* era background: var(--pre-bg); */
+            border-radius: 8px;
+            padding: 0.3em 0.5em; /* era : 1.2em 1.4em; */
+            overflow-x: auto;
+            margin: 1.2em 0;
+            font-size: 0.85em;
+            line-height: 1.65;
+        }
+
+        #content pre code {
+            font-family: var(--font-mono);
+            background: transparent;
+            color: var(--navy); /* era color: var(--pre-text); */
+            padding: 0;
+            border: none;
+            border-radius: 0;
+            font-size: 1em;
+        }
+
+        /* ============================================================
+           TABELAS — estilo fiscal/editorial com grade completa
+           Seletor duplo: cobre tabelas dentro de #content (geradas pelo
+           markdown-it) e tabelas inline coladas diretamente no HTML.
+           ============================================================ */
+        #content table,
+        body > table {
             width: 100%;
             border-collapse: collapse;
-            margin: 20px 0;
-            /* Deixamos o navegador calcular as larguras baseado no conteúdo */
+            margin: 1.4em 0;
+            font-family: var(--font-sans);
+            font-size: 0.875em;
+            line-height: 1.5;
+            /* Borda externa da tabela inteira */
+            border: 1px solid rgba(0,0,0,0.4);  /*era 0.14*/
+            border-radius: 6px;
+            overflow: hidden; /* esconde cantos do border-radius */
         }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 2px;
+
+        #content thead th,
+        body > table thead th {
+            background: var(--table-head-bg);
+            font-weight: 600;
+            font-size: 0.9em; /* era font-size: 0.78em; */
+            /* text-transform: uppercase; */
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            padding: 2px 2px; /* era padding: 9px 12px; */
             text-align: left;
-            /* Força números e textos longos a quebrarem em vez de esticarem a tabela para fora da tela */
+            /* Grade completa: borda inferior dupla + laterais */
+            border-bottom: 2px solid rgba(0,0,0,0.3); /*0.18*/
+            border-right: 1px solid rgba(0,0,0,0.4); /*0.08*/
+        }
+        #content thead th:last-child,
+        body > table thead th:last-child {
+            border-right: none;
+        }
+
+        #content tbody td,
+        body > table tbody td {
+            padding: 1px 2px; /* era padding: 8px 12px; */
+            /* border-bottom: 1px solid var(--border); */
+            vertical-align: top;
             overflow-wrap: anywhere;
-            word-break: break-word; 
+            word-break: break-word;
+            /* Grade completa: todas as bordas */
+            border-bottom: 1px solid rgba(0,0,0,0.25); /*0.07*/
+            border-right: 1px solid rgba(0,0,0,0.2); /*0.06*/
         }
-        th { background: #f8f9fa; font-weight: 600; }
-
-
-
-        tr:nth-child(even) { background-color: #f8f9fa; }
-
-        .metadata-box {
-            background: #eef2f5;
-            border-left: 4px solid var(--accent-color);
-            padding: 15px 20px;
-            margin-bottom: 30px;
-            border-radius: 0 8px 8px 0;
-            font-size: 0.9em;
+        #content tbody td:last-child,
+        body > table tbody td:last-child {
+            border-right: none;
         }
-        .metadata-box h3 { margin-top: 0; color: var(--accent-color); }
-        .metadata-box table { margin: 0; }
-        .metadata-box th, .metadata-box td { padding: 6px 12px; border: none; border-bottom: 1px solid #ddd; }
-        
-        h1, h2, h3 { border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
-        code { background: #f1f3f5; padding: 2px 5px; border-radius: 4px; font-family: monospace; }
-        pre code { display: block; padding: 15px; overflow-x: auto; background: #212529; color: #f8f9fa; }
-
-        /* Marca-texto */
-        mark { 
-            background-color: #fff59d; /* Amarelo caneta marca-texto */
-            padding: 2px 4px; 
-            border-radius: 3px; 
-            font-weight: 600; /* Deixa o texto grifado um pouco mais forte */
-            color: #000;
-        }
-        
-        /* Notas de Rodapé */
-        .footnotes-sep { margin-top: 40px; border-top: 1px solid var(--border-color); }
-        .footnotes { font-size: 0.85em; color: #555; }
-        
-        /* Listas de Tarefas */
-        .contains-task-list { list-style-type: none; padding-left: 0; }
-        .task-list-item input[type="checkbox"] { 
-            margin-right: 10px; 
-            transform: scale(1.2); /* Deixa o quadradinho maior e mais fácil de ler */
-            cursor: pointer;
+        #content tbody tr:last-child td,
+        body > table tbody tr:last-child td {
+            border-bottom: none;
         }
 
-        /* MELHORIA 2: ESTILOS PARA CALLOUTS (ADMONITIONS) */
+        #content tbody tr:nth-child(even) td,
+        body > table tbody tr:nth-child(even) td { background: var(--table-stripe); }
+
+        #content tbody tr:hover td,
+        body > table tbody tr:hover td { background: #f0ede6; }
+
+        /* Colunas numéricas ficam melhor alinhadas à direita */
+        #content table td:not(:first-child),
+        #content table th:not(:first-child) {
+            /* Não forçamos right por padrão — o markdown-it controla via :---: */
+        }
+
+        /* ============================================================
+           LINHA HORIZONTAL
+           ============================================================ */
+        #content hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            /* margin: 2.5em 0; */
+        }
+
+        /* ============================================================
+           IMAGENS
+           ============================================================ */
+        #content img {
+            max-width: 100%;
+            border-radius: 6px;
+            margin: 0.5em 0;
+        }
+
+        /* ============================================================
+           FOOTNOTES
+           ============================================================ */
+        .footnotes {
+            font-family: var(--font-sans);
+            font-size: var(--text-xs);
+            color: var(--text-muted);
+            margin-top: 2.5em;
+            padding-top: 1.5em;
+            border-top: 1px solid var(--border);
+        }
+
+        /* ============================================================
+           CALLOUTS (estilo Obsidian)
+           ============================================================ */
         .callout {
-            border-left: 4px solid #448aff;
-            background-color: #f0f4ff;
-            padding: 15px 15px 15px 20px;
-            margin: 20px 0;
-            border-radius: 4px;
+            margin: 1.5em 0;
+            padding: 0.9em 1.2em 0.9em 1em;
+            border-left: 4px solid;
+            border-radius: 0 8px 8px 0;
+            font-family: var(--font-sans);
+            font-size: 0.92em;
         }
-        .callout-title { font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; color: #448aff;}
-        
-        /* Cores dinâmicas baseadas no tipo de aviso */
-        .callout.callout-warning { border-color: #ff9100; background-color: #fff8e1; }
-        .callout.callout-warning .callout-title { color: #ff9100; }
-        .callout.callout-danger, .callout.callout-error, .callout.callout-critical { border-color: #ff5252; background-color: #ffebee; }
-        .callout.callout-danger .callout-title, .callout.callout-error .callout-title { color: #ff5252; }
-        .callout.callout-success { border-color: #00e676; background-color: #e8f5e9; }
-        .callout.callout-success .callout-title { color: #00e676; }
-        .callout.callout-note { border-color: #9e9e9e; background-color: #f5f5f5; }
-        .callout.callout-note .callout-title { color: #757575; }
-		/* info: Azul Claro */
-        .callout.callout-info { border-color: #00b0ff; background-color: #e3f2fd; }
-        .callout.callout-info .callout-title { color: #00b0ff; }
-        /* tip: Verde Água (Cyan) */
-        .callout.callout-tip { border-color: #00bfa5; background-color: #e0f2f1; }
-        .callout.callout-tip .callout-title { color: #00bfa5; }
-        /* question: Roxo */
-        .callout.callout-question { border-color: #9c27b0; background-color: #f3e5f5; }
-        .callout.callout-question .callout-title { color: #9c27b0; }
-        /* bug: Vermelho Forte */
-        .callout.callout-bug { border-color: #d32f2f; background-color: #ffebee; }
-        .callout.callout-bug .callout-title { color: #d32f2f; }
-        /* example: Índigo (Azul escuro/Roxo) */
-        .callout.callout-example { border-color: #3f51b5; background-color: #e8eaf6; }
-        .callout.callout-example .callout-title { color: #3f51b5; }
-        /* quote: Cinza Escuro com fonte itálica */
-        .callout.callout-quote { border-color: #9e9e9e; background-color: #fafafa; font-style: italic; }
-        .callout.callout-quote .callout-title { color: #616161; font-style: normal; }
+        .callout-title {
+            font-weight: 600;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .callout p { margin: 0; font-family: var(--font-sans); }
+
+        .callout.callout-note    { border-color: #9b9890; background: #f7f5f0; }
+        .callout.callout-note    .callout-title { color: #6b6860; }
+        .callout.callout-info    { border-color: #185fa5; background: #eef4fb; }
+        .callout.callout-info    .callout-title { color: #185fa5; }
+        .callout.callout-tip     { border-color: #0d7c5f; background: #edf6f3; }
+        .callout.callout-tip     .callout-title { color: #0d7c5f; }
+        .callout.callout-warning { border-color: #b45309; background: #fef9ee; }
+        .callout.callout-warning .callout-title { color: #b45309; }
+        .callout.callout-danger,
+        .callout.callout-error   { border-color: #991b1b; background: #fef2f2; }
+        .callout.callout-danger  .callout-title,
+        .callout.callout-error   .callout-title { color: #991b1b; }
+        .callout.callout-success { border-color: #166534; background: #f0fdf4; }
+        .callout.callout-success .callout-title { color: #166534; }
+        .callout.callout-question{ border-color: #7c3aed; background: #f5f3ff; }
+        .callout.callout-question .callout-title { color: #7c3aed; }
+        .callout.callout-bug     { border-color: #b91c1c; background: #fff1f2; }
+        .callout.callout-bug     .callout-title { color: #b91c1c; }
+        .callout.callout-example { border-color: #3730a3; background: #eef2ff; }
+        .callout.callout-example .callout-title { color: #3730a3; }
+        .callout.callout-quote   { border-color: #d6d0c8; background: #f7f5f0; font-style: italic; }
+        .callout.callout-quote   .callout-title { color: #6b6860; font-style: normal; }
+        .callout.callout-critical{ border-color: #7f1d1d; background: #fff1f2; }
+        .callout.callout-critical .callout-title { color: #7f1d1d; }
+
+        /* ============================================================
+           METADATA BOX (frontmatter YAML)
+           ============================================================ */
+        .metadata-box {
+            background: #f3f1ec;
+            border: 1px solid var(--border-mid);
+            border-radius: 8px;
+            padding: 14px 18px;
+            margin-bottom: 2.5em;
+            font-family: var(--font-sans);
+            /* font-size: var(--text-xs); */
+        }
+        .metadata-box h3 {
+            margin: 0 0 10px;
+            font-family: var(--font-sans);
+            font-size: 0.78em;
+            font-weight: 600;
+            /* text-transform: uppercase; */
+             letter-spacing: 0.07em;
+            color: var(--text-muted);
+            border: none;
+            padding: 0;
+        }
+        .metadata-box table { margin: 0; font-size: 1em; }
+        .metadata-box td, .metadata-box th {
+            padding: 3px 10px 3px 0;
+            border: none;
+            background: transparent;
+            font-size: 1em;
+        }
+        .metadata-box th {
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: none;
+            letter-spacing: 0;
+            width: 30%;
+        }
     </style>
 </head>
 <body>
 
-    <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
-        <h2>📂 Arraste um arquivo .md aqui</h2>
-        <p>Ou clique para selecionar (Relatórios, SKILL.md, etc)</p>
-        <input type="file" id="fileInput" accept=".md">
-    </div>
+<!-- ===== TOOLBAR ===== -->
+<div id="toolbar">
+    <span id="toolbar-filename">—</span>
+    <span id="badge-edit">editando</span>
+    <span id="toolbar-hint">Ctrl+S salva como HTML</span>
+    <button id="btn-toggle-edit">✏ Editar</button>
+    <button id="btn-download">↓ Salvar HTML</button>
+</div>
 
-    <div id="content"></div>
+<div id="save-flash">✓ Download iniciado</div>
 
-    <script>
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('fileInput');
-        const contentDiv = document.getElementById('content');
+<!-- ===== DROP ZONE (modo ad-hoc) ===== -->
+<div id="dropZone" onclick="document.getElementById('fileInput').click()">
+    <span class="drop-icon">📄</span>
+    <h2>Arraste um arquivo .md aqui</h2>
+    <p>Ou clique para selecionar</p>
+    <input type="file" id="fileInput" accept=".md">
+</div>
 
-        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
-        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            if (e.dataTransfer.files.length) processFile(e.dataTransfer.files[0]);
-        });
+<!-- ===== CONTEÚDO ===== -->
+<div id="content"></div>
 
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length) processFile(e.target.files[0]);
-        });
+<script>
+    /* ================================================================
+       ESTADO
+       ================================================================ */
+    let currentFilename = 'relatorio.html';
+    let isEditMode = false;
 
-        function processFile(file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const text = e.target.result;
-                renderContent(text);
-                dropZone.style.display = 'none';
-                contentDiv.style.display = 'block';
-                document.title = file.name + " - VC Reader";
-            };
-            reader.readAsText(file);
-        }
+    const dropZone   = document.getElementById('dropZone');
+    const fileInput  = document.getElementById('fileInput');
+    const contentDiv = document.getElementById('content');
+    const toolbar    = document.getElementById('toolbar');
+    const badgeEdit  = document.getElementById('badge-edit');
+    const btnToggle  = document.getElementById('btn-toggle-edit');
+    const btnDl      = document.getElementById('btn-download');
+    const flashEl    = document.getElementById('save-flash');
+    const filenameEl = document.getElementById('toolbar-filename');
 
-        function processarCallouts(text) {
-            const regex = /(?:^>[ \t]*.*(?:\r?\n|$))+/gm;
-            
-            return text.replace(regex, function(match) {
-                const linhas = match.split(/\r?\n/);
-                const primeiraLinha = linhas[0].match(/^>[ \t]*\[!([^\]]+)\](.*)/);
-                
-                if (!primeiraLinha) return match; 
+    /* ================================================================
+       DROP ZONE
+       ================================================================ */
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) processFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', e => {
+        if (e.target.files.length) processFile(e.target.files[0]);
+    });
 
-                const typeLower = primeiraLinha[1].toLowerCase();
-                const titleText = primeiraLinha[2].trim() || typeLower.charAt(0).toUpperCase() + typeLower.slice(1);
-                
-                const contentLines = linhas.slice(1)
-                                           .filter(line => line.trim() !== '' && line.trim() !== '>')
-                                           .map(line => line.replace(/^>[ \t]?/, ''));
-                
-                const content = contentLines.join('\n');
-                
-                return `\n<div class="callout callout-${typeLower}">\n<div class="callout-title">${titleText}</div>\n\n${content}\n\n</div>\n`;
-            });
-        }
-
-        function renderContent(text) {
-            // 1. Inicializa apenas o núcleo básico, que é garantido que funciona
-            let md = window.markdownit({ html: true, linkify: true, typographer: true });
-            
-            // Console de debug para você confirmar que os plugins carregaram na memória
-            console.log("Status dos Plugins:", {
-                Emoji: !!window.markdownitEmoji,
-                Footnote: !!window.markdownitFootnote,
-                TaskLists: !!window.markdownitTaskLists,
-                Mark: !!window.markdownitMark
-            });
-
-            // 2. Tenta carregar os plugins extras com segurança (SÓ carrega se existirem)
-            if (window.markdownitEmoji) md = md.use(window.markdownitEmoji);
-            if (window.markdownitFootnote) md = md.use(window.markdownitFootnote);
-            if (window.markdownitTaskLists) md = md.use(window.markdownitTaskLists, { enabled: true });
-            if (window.markdownitMark) md = md.use(window.markdownitMark);
-            
-            // 3. Roda o pré-processador de Callouts
-            text = processarCallouts(text);
-
-            // 4. Lida com o YAML e a renderização
-            if (text.startsWith('---')) {
-                const parts = text.split('---');
-                if (parts.length >= 3) {
-                    try {
-                        const doc = jsyaml.load(parts[1]);
-                        let metaHtml = "<div class='metadata-box'><h3>🏷️ Frontmatter (YAML)</h3><table>";
-                        for (const [key, value] of Object.entries(doc)) {
-                            metaHtml += `<tr><th>${key}</th><td>${typeof value === 'object' ? JSON.stringify(value) : value}</td></tr>`;
-                        }
-                        metaHtml += "</table></div>";
-                        
-                        contentDiv.innerHTML = metaHtml + md.render(parts.slice(2).join('---'));
-                    } catch (e) {
-                        console.warn("Erro ao fazer parse do YAML", e);
-                        contentDiv.innerHTML = md.render(text);
-                    }
-                }
-            } else {
-                contentDiv.innerHTML = md.render(text);
-            }
-
-            // 5. Aciona o desenhista de gráficos (se a biblioteca tiver carregado com segurança)
-            if (window.mermaid) {
-                setTimeout(() => { 
-                    try { mermaid.run({ querySelector: '.language-mermaid' }); } 
-                    catch(e) { console.warn("Nenhum gráfico Mermaid encontrado ou falha na renderização."); }
-                }, 100);
-            }
-        }
-
-        window.onload = function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const fileUrl = urlParams.get('file');
-            
-            // Aviso amigável caso esteja usando arquivo local sem servidor
-            if (fileUrl) {
-                if (window.location.protocol === 'file:') {
-                    alert("Aviso de Segurança do Navegador:\nVocê não pode abrir o arquivo '" + fileUrl + "' diretamente pela URL em um arquivo local (file://).\n\nUse o recurso de arrastar o arquivo para dentro da tela ou abra via script Python (localhost)!");
-                    return;
-                }
-                
-                fetch(fileUrl)
-                    .then(response => {
-                        if (!response.ok) throw new Error("Arquivo não encontrado");
-                        return response.text();
-                    })
-                    .then(text => {
-                        renderContent(text);
-                        // A div de upload já está invisível devido ao CSS, mas mantemos por precaução
-                        dropZone.style.display = 'none'; 
-                        contentDiv.style.display = 'block';
-                    })
-                    .catch(err => {
-                        console.error("Erro ao carregar o arquivo via URL:", err);
-                    });
-            } else {
-                // <-- ADICIONADO: Se a URL não tiver ficheiro, ligamos a zona de upload
-                dropZone.style.display = 'block'; 
-            }
+    function processFile(file) {
+        currentFilename = file.name.replace(/\.md$/i, '') + '.html';
+        const reader = new FileReader();
+        reader.onload = e => {
+            renderContent(e.target.result);
+            dropZone.classList.remove('show');
+            showContentArea(file.name);
         };
-    </script>
+        reader.readAsText(file);
+    }
+
+    function showContentArea(displayName) {
+        contentDiv.classList.add('show');
+        toolbar.classList.add('visible');
+        filenameEl.textContent = displayName;
+        document.title = displayName + ' — VC Reader';
+    }
+
+    /* ================================================================
+       MODO DE EDIÇÃO
+       ================================================================ */
+    btnToggle.addEventListener('click', toggleEditMode);
+
+    function toggleEditMode() {
+        isEditMode = !isEditMode;
+        if (isEditMode) {
+            contentDiv.setAttribute('contenteditable', 'true');
+            contentDiv.focus();
+            btnToggle.classList.add('active');
+            btnToggle.textContent = '👁 Visualizar';
+            badgeEdit.classList.add('visible');
+        } else {
+            contentDiv.removeAttribute('contenteditable');
+            btnToggle.classList.remove('active');
+            btnToggle.textContent = '✏ Editar';
+            badgeEdit.classList.remove('visible');
+        }
+    }
+
+    /* ================================================================
+       SALVAR COMO HTML STANDALONE
+       Captura HTML renderizado + CSS computado → arquivo autônomo.
+       Toolbar/dropzone/flash são ocultados no arquivo salvo.
+       ================================================================ */
+    function buildStandaloneHtml() {
+        let inlineCss = '';
+        Array.from(document.styleSheets).forEach(sheet => {
+            try {
+                Array.from(sheet.cssRules || []).forEach(r => {
+                    inlineCss += r.cssText + '\n';
+                });
+            } catch { /* cross-origin, ignora */ }
+        });
+
+        const title       = document.title;
+        const bodyContent = contentDiv.innerHTML;
+
+        return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${title}</title>
+<style>
+${inlineCss}
+#toolbar, #dropZone, #save-flash, #badge-edit { display: none !important; }
+#content {
+  display: block !important;
+  border-left: none !important;
+  padding-left: 56px !important;
+}
+body { background: #ffffff; }
+</style>
+</head>
+<body>
+<div id="content" class="show">
+${bodyContent}
+</div>
+</body>
+</html>`;
+    }
+
+    function triggerDownload() {
+        const html = buildStandaloneHtml();
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url;
+        a.download = currentFilename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showFlash();
+    }
+
+    function showFlash() {
+        flashEl.classList.add('show');
+        setTimeout(() => flashEl.classList.remove('show'), 2000);
+    }
+
+    btnDl.addEventListener('click', triggerDownload);
+
+    document.addEventListener('keydown', e => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            if (contentDiv.classList.contains('show')) triggerDownload();
+        }
+    });
+
+    /* ================================================================
+       RENDERIZAÇÃO DE MARKDOWN
+       ================================================================ */
+    function processarCallouts(text) {
+        const regex = /(?:^>[ \t]*.*(?:\r?\n|$))+/gm;
+        return text.replace(regex, match => {
+            const linhas   = match.split(/\r?\n/);
+            const primeira = linhas[0].match(/^>[ \t]*\[!([^\]]+)\](.*)/);
+            if (!primeira) return match;
+            const typeLower    = primeira[1].toLowerCase();
+            const titleText    = primeira[2].trim() || typeLower.charAt(0).toUpperCase() + typeLower.slice(1);
+            const contentLines = linhas.slice(1)
+                .filter(l => l.trim() !== '' && l.trim() !== '>')
+                .map(l => l.replace(/^>[ \t]?/, ''));
+            return `\n<div class="callout callout-${typeLower}">\n<div class="callout-title">${titleText}</div>\n\n${contentLines.join('\n')}\n\n</div>\n`;
+        });
+    }
+
+    function renderContent(text) {
+        let md = window.markdownit({ html: true, linkify: true, typographer: true });
+        if (window.markdownitEmoji)     md = md.use(window.markdownitEmoji);
+        if (window.markdownitFootnote)  md = md.use(window.markdownitFootnote);
+        if (window.markdownitTaskLists) md = md.use(window.markdownitTaskLists, { enabled: true });
+        if (window.markdownitMark)      md = md.use(window.markdownitMark);
+
+        text = processarCallouts(text);
+
+        if (text.startsWith('---')) {
+            const parts = text.split('---');
+            if (parts.length >= 3) {
+                try {
+                    const doc = jsyaml.load(parts[1]);
+                    let metaHtml = "<div class='metadata-box'><h3>Frontmatter</h3><table>";
+                    for (const [k, v] of Object.entries(doc)) {
+                        const val = typeof v === 'object' ? JSON.stringify(v) : v;
+                        metaHtml += `<tr><th>${k}</th><td>${val}</td></tr>`;
+                    }
+                    metaHtml += "</table></div>";
+                    contentDiv.innerHTML = metaHtml + md.render(parts.slice(2).join('---'));
+                } catch {
+                    contentDiv.innerHTML = md.render(text);
+                }
+                renderMermaid();
+                return;
+            }
+        }
+
+        contentDiv.innerHTML = md.render(text);
+        renderMermaid();
+    }
+
+    function renderMermaid() {
+        if (window.mermaid) {
+            setTimeout(() => {
+                try { mermaid.run({ querySelector: '.language-mermaid' }); }
+                catch { /* sem diagramas */ }
+            }, 100);
+        }
+    }
+
+    /* ================================================================
+       BOOT — modo servido (?file=) ou ad-hoc (dropzone)
+       ================================================================ */
+    window.onload = function () {
+        const params  = new URLSearchParams(window.location.search);
+        const fileUrl = params.get('file');
+
+        if (fileUrl) {
+            const parts   = fileUrl.split('/');
+            const rawName = decodeURIComponent(parts[parts.length - 1]) || 'relatorio.md';
+            currentFilename = rawName.replace(/\.md$/i, '') + '.html';
+
+            fetch(fileUrl)
+                .then(r => { if (!r.ok) throw new Error('Arquivo não encontrado'); return r.text(); })
+                .then(text => {
+                    renderContent(text);
+                    showContentArea(rawName);
+                    /* dropZone permanece oculta — não adiciona .show */
+                })
+                .catch(() => {
+                    dropZone.classList.add('show');
+                });
+        } else {
+            /* modo ad-hoc: exibe dropzone */
+            dropZone.classList.add('show');
+        }
+    };
+</script>
 </body>
 </html>

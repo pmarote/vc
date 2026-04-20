@@ -3,6 +3,9 @@ name = "vc-utils"
 version = "0.1.0"
 description = "Toolkit de suporte e utilitários compartilhados"
 requires-python = "==3.12.*"
+authors = [
+    { name = "pmarote" }
+]
 dependencies = [
     "requests",
     "beautifulsoup4",

@@ -37,6 +37,14 @@ def get_select_statement(conn: sqlite3.Connection, name: str) -> str:
     except Exception:
         return f"-- erro ao montar SELECT para {name}"
 
+def get_row_count(conn: sqlite3.Connection, name: str) -> int:
+    """Retorna o total de linhas de uma tabela ou view."""
+    try:
+        cursor = conn.execute(f'SELECT COUNT(*) FROM "{name}"')
+        return cursor.fetchone()[0]
+    except Exception:
+        return 0
+
 def get_sample_md(conn: sqlite3.Connection, name: str, limit: int = 5) -> str:
     """Extrai uma amostra e converte para Markdown sem usar o Pandas."""
     try:
@@ -67,7 +75,7 @@ def _matches(name: str, pattern: str | None) -> bool:
 
 # ======= GERAÇÃO DO RELATÓRIO =======
 
-def run_sqlite_dump(db_path: Path, dst_path: Path, limit: int = 5, name_pattern: str | None = None):
+def run_sqlite_dump(db_path: Path, dst_path: Path, limit: int = 5, name_pattern: str | None = None, hide_empty: bool = False):
     """Lógica principal para gerar e salvar o Markdown."""
     if not db_path.exists():
         print(f"[ERRO] Arquivo SQLite não encontrado: {db_path}")
@@ -87,6 +95,8 @@ def run_sqlite_dump(db_path: Path, dst_path: Path, limit: int = 5, name_pattern:
         parts.append(f"> _Linhas de amostra: **{limit}**_")
         if name_pattern:
             parts.append(f"> _Filtro aplicado: **{name_pattern}**_")
+        if hide_empty:
+            parts.append(f"> _Ocultando detalhes de tabelas sem dados (`--hide-empty`)_")
         parts.append("")
 
         if not name_pattern:
@@ -102,10 +112,27 @@ def run_sqlite_dump(db_path: Path, dst_path: Path, limit: int = 5, name_pattern:
             parts.append("_(sem tabelas para o filtro informado)_\n")
 
         for table in filtered_tables:
+            # --- NOVA LÓGICA DE OCULTAR VAZIAS ---
+            if hide_empty and get_row_count(conn, table) == 0:
+                # parts.append("> _Não mostrada definição, índices, uso e amostra porque está sem linhas (opção `--hide-empty` de comando)_\n")
+                # parts.append("\n---\n")
+                continue
+            
             parts.append(f"### 📊 `{table}`\n")
+            
+            # create_sql = get_create_sql(conn, table)
+            # if create_sql:
+            #     parts.append(f"```sql\n{create_sql}\n```\n")
             create_sql = get_create_sql(conn, table)
             if create_sql:
-                parts.append(f"```sql\n{create_sql}\n```\n")
+                # Troca \r e \n por espaço em branco
+                create_sql_limpo = create_sql.replace('\r', ' ').replace('\n', ' ')
+                # Opcional: Se a junção criar muitos espaços duplos, você pode limpá-los assim:
+                create_sql_limpo = create_sql_limpo.replace('  ', ' ')
+                # Opcional: As vezes sobrem espaços duplos, você pode limpá-los assim:
+                create_sql_limpo = create_sql_limpo.replace('  ', ' ')
+                parts.append(f"```sql\n{create_sql_limpo}\n```\n")
+
             
             for idx_sql in get_indexes(conn, table):
                 parts.append(f"```sql\n{idx_sql}\n```\n")
@@ -115,10 +142,16 @@ def run_sqlite_dump(db_path: Path, dst_path: Path, limit: int = 5, name_pattern:
             parts.append("\n---\n")
 
         # ======== VIEWS e TRIGGERS ========
-        # (Lógica mantida compacta para Views e Triggers)
         parts.append("## 2. Views\n")
         for view in [v for v in views if _matches(v, name_pattern)]:
             parts.append(f"### 👁️ `{view}`\n")
+            
+            # --- NOVA LÓGICA DE OCULTAR VAZIAS NAS VIEWS ---
+            if hide_empty and get_row_count(conn, view) == 0:
+                parts.append("> _Não mostrada definição, uso e amostra porque está sem linhas (opção `--hide-empty` de comando)_\n")
+                parts.append("\n---\n")
+                continue
+
             parts.append(f"```sql\n{get_create_sql(conn, view)}\n```\n")
             parts.append(f"```sql\n{get_select_statement(conn, view)}\n```\n")
             parts.append(get_sample_md(conn, view, limit=limit))
@@ -139,6 +172,7 @@ def run_sqlite_dump(db_path: Path, dst_path: Path, limit: int = 5, name_pattern:
 
 if __name__ == "__main__":
     import argparse
+    import sys
     
     # Resolve o caminho da raiz do projeto (sobe um nível de 'utils' para 'vc')
     ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -150,6 +184,9 @@ if __name__ == "__main__":
     parser.add_argument("--dst", default=str(VAR_DIR / "relatorio_banco.md"), help="Arquivo .md de saída (padrão: var/relatorio_banco.md)")
     parser.add_argument("--limit", type=int, default=5, help="Número de linhas de amostra por tabela (padrão=5)")
     parser.add_argument("--name", help="Filtra tabelas/views por nome (aceita %% como curinga, ex: cfop%%)")
+    
+    # NOVO PARÂMETRO
+    parser.add_argument("--hide-empty", action="store_true", help="Oculta os detalhes de tabelas e views que não possuem linhas.")
     
     args = parser.parse_args()
     
@@ -163,7 +200,14 @@ if __name__ == "__main__":
     print(f"🗄️ Inspecionando banco SQLite...")
     print(f"   Origem:  {src_path}")
     print(f"   Destino: {dst_path}")
+    if args.hide_empty:
+        print(f"   Filtro:  Ocultando tabelas vazias")
     
-    # NOTA: Adapte a chamada abaixo para o nome real da função principal
-    # que faz a geração e salva o arquivo dentro do seu sqlite_dump.py
-    # Exemplo: gerar_markdown_sqlite(src_path, dst_path, args.limit, args.name)
+    # Chamando a função principal com o novo parâmetro
+    run_sqlite_dump(
+        db_path=src_path, 
+        dst_path=dst_path, 
+        limit=args.limit, 
+        name_pattern=args.name,
+        hide_empty=args.hide_empty
+    )

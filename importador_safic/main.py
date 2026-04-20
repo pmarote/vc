@@ -17,7 +17,8 @@ def main():
     # Subcomando: merge
     p_merge = subparsers.add_parser("merge", help="Consolida arquivos SQLite de uma pasta em um único banco")
     p_merge.add_argument("--src", required=True, help="Pasta contendo os arquivos .db3 ou .sqlite extraídos")
-    p_merge.add_argument("--out", required=True, help="Caminho completo do arquivo SQLite final (ex: ../var/osf_final.sqlite)")
+    p_merge.add_argument("--out", required=True, help="Caminho completo do arquivo SQLite final (ex: ../var/osf.sqlite)")
+    p_merge.add_argument("--all-tables", action="store_true", help="Importa TODAS as tabelas encontradas aplicando as regras de prefixo dinâmico")
 
     args = parser.parse_args()
 
@@ -34,7 +35,9 @@ def main():
         # Resolve os caminhos para permitir chamadas relativas de qualquer lugar
         src_dir = Path(args.src).resolve()
         out_file = Path(args.out).resolve()
-        merge_safic_databases(out_file, src_dir)
+        
+        # Repassa a nova flag all_tables
+        merge_safic_databases(out_file, src_dir, all_tables=args.all_tables)
 
 if __name__ == "__main__":
     main()

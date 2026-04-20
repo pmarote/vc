@@ -39,7 +39,7 @@ doskey vcaia=uv run --directory %~dp0ollama_analyst main.py $*
 :: Utilitários
 doskey utils=uv run --directory %~dp0utils main.py list
 doskey pmc=uv run --directory %~dp0utils pmcloud.py $*
-doskey sqlite2md=uv run --directory %~dp0utils sqlite2md $*
+doskey sqlite2md=uv run --directory %~dp0utils sqlite_dump.py $*
 
 :: Verificação e Mapeamento de Ferramentas Externas (Portáteis)
 :: Retirado o start e adicionado o $* para permitir abrir arquivos passando o nome
@@ -73,7 +73,7 @@ echo   %GREEN%vcaia%RESET%                 Ollama Analyst (uv run --directory %~
 echo %YELLOW% %BOLD%[UTILS]%RESET%
 echo   %GREEN%utils%RESET%                 Lista utilitários (vc utils main.py list)
 echo   %GREEN%pmc%RESET%                   PMCloud Sync/Backup privado (uv run --directory %~dp0utils pmcloud.py $*)
-echo   %GREEN%sqlite2md%RESET%             sqlite2md (uv run --directory %~dp0utils sqlite2md.py $*)
+echo   %GREEN%sqlite2md%RESET%             sqlite2md (uv run --directory %~dp0utils sqlite_dump.py $*)
 
 if exist "%USR_DIR%\" (
     echo %YELLOW% %BOLD%[FERRAMENTAS]%RESET%

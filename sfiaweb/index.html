@@ -2,179 +2,769 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>VC - Workspace Explorer</title>
+    <title>VC - Workspace</title>
     <style>
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #fff; margin: 0; color: #212529; }
-        header { background: #1a1a2e; color: #fff; padding: 15px 20px; display: flex; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        
-        /* Breadcrumbs da Raiz */
-        .breadcrumbs { flex: 1; font-size: 1.1em; display: flex; gap: 8px; align-items: center; }
-        .breadcrumbs a { color: #64b5f6; text-decoration: none; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
-        .breadcrumbs a:hover { background: rgba(255,255,255,0.1); text-decoration: underline; }
-        .breadcrumbs span.sep { color: #888; }
-        .breadcrumbs span.current { color: #fff; padding: 2px 6px; }
+        :root {
+            --bg: #f4f5f7;
+            --surface: #ffffff;
+            --navy: #1a1a2e;
+            --navy-mid: #16213e;
+            --navy-hover: #1c2a4a;
+            --accent: #0d6efd;
+            --accent-dim: #0b5ed7;
+            --green: #198754;
+            --orange: #fd7e14;
+            --red: #dc3545;
+            --border: #dee2e6;
+            --text: #212529;
+            --text-muted: #6c757d;
+            --radius: 8px;
+        }
 
-        main { padding: 30px; max-width: 1400px; margin: auto; }
-        
-        /* Tabela estilo Windows Explorer */
-        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95em; }
-        th { border-bottom: 2px solid #ddd; padding: 12px; color: #666; font-weight: 600; cursor: default; }
-        td { padding: 10px 12px; border-bottom: 1px solid #eee; }
-        tr:hover td { background: #f8f9fa; }
-        
-        .icon { margin-right: 12px; font-size: 1.2em; display: inline-block; width: 20px; text-align: center; }
-        a.item-link { text-decoration: none; color: #333; display: flex; align-items: center; cursor: pointer; }
-        a.item-link:hover { color: #0d6efd; }
-        
-        .col-size, .col-date { color: #666; width: 180px; }
-        .msg-erro { color: #dc3545; padding: 20px; font-weight: bold; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* ===== HEADER ===== */
+        header {
+            background: var(--navy);
+            color: #fff;
+            padding: 0 20px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        header .logo {
+            font-weight: 700;
+            font-size: 1.1em;
+            color: #64b5f6;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        header .work-dir {
+            flex: 1;
+            font-size: 0.8em;
+            color: #888;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        header .btn-shutdown {
+            background: var(--red);
+            color: #fff;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.82em;
+            font-weight: 600;
+            white-space: nowrap;
+            transition: background 0.15s;
+        }
+        header .btn-shutdown:hover { background: #b02a37; }
+
+        /* ===== LAYOUT PRINCIPAL — largura total ===== */
+        main {
+            width: 100%;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* ===== PAINÉIS RETRÁTEIS ===== */
+        .panel {
+            background: var(--surface);
+            border-radius: var(--radius);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            background: var(--navy-mid);
+            color: #fff;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s;
+        }
+        .panel-header:hover { background: var(--navy-hover); }
+
+        .panel-title {
+            font-weight: 600;
+            font-size: 0.92em;
+            flex: 1;
+        }
+
+        .panel-toggle {
+            font-size: 0.75em;
+            color: #aaa;
+            transition: transform 0.2s;
+            display: inline-block;
+        }
+
+        /* Quando está recolhido, o ▼ gira para ▶ */
+        .panel-header.collapsed .panel-toggle { transform: rotate(-90deg); }
+
+        .panel-body { padding: 16px; }
+        .panel-body.hidden { display: none; }
+
+        /* ===== CAMPOS ===== */
+        label {
+            display: block;
+            font-size: 0.8em;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            margin-bottom: 4px;
+        }
+
+        input[type="text"], select, textarea {
+            width: 100%;
+            padding: 7px 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.9em;
+            background: #fff;
+            color: var(--text);
+            transition: border-color 0.15s;
+        }
+        input[type="text"]:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(13,110,253,0.1);
+        }
+
+        textarea {
+            font-family: 'Consolas', 'Cascadia Code', 'Courier New', monospace;
+            font-size: 0.85em;
+            resize: vertical;
+            min-height: 90px;
+        }
+
+        .field { margin-bottom: 12px; }
+        .field:last-child { margin-bottom: 0; }
+
+        /* ===== BOTÕES ===== */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.88em;
+            font-weight: 600;
+            transition: background 0.15s, opacity 0.15s;
+            text-decoration: none;
+        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary  { background: var(--accent); color: #fff; }
+        .btn-primary:hover:not(:disabled)  { background: var(--accent-dim); }
+        .btn-success  { background: var(--green); color: #fff; }
+        .btn-success:hover:not(:disabled)  { background: #146c43; }
+        .btn-orange   { background: var(--orange); color: #fff; }
+        .btn-orange:hover:not(:disabled)   { background: #d96e00; }
+        .btn-ghost    { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+        .btn-ghost:hover { background: var(--bg); }
+        .btn-dark     { background: var(--navy-mid); color: #fff; }
+        .btn-dark:hover { background: var(--navy-hover); }
+
+        .btn-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        /* ===== RESULTADO DE QUERY ===== */
+        #query-result-wrap { display: none; margin-top: 16px; }
+        #query-result-wrap.show { display: block; }
+
+        #query-result-label {
+            font-size: 0.8em;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            margin-bottom: 6px;
+        }
+
+        #query-result {
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            overflow: auto;
+            max-height: 500px;
+            background: #fff;
+        }
+
+        #query-result table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.84em;
+        }
+        #query-result th {
+            background: var(--navy);
+            color: #fff;
+            padding: 6px 10px;
+            text-align: left;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            white-space: nowrap;
+        }
+        #query-result td {
+            padding: 5px 10px;
+            border-bottom: 1px solid #f0f0f0;
+            overflow-wrap: anywhere;
+        }
+        #query-result tr:nth-child(even) td { background: #f9f9f9; }
+        #query-result tr:hover td { background: #e8f0fe; }
+
+        .query-meta {
+            font-size: 0.8em;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        /* ===== MENSAGENS DE STATUS ===== */
+        .status-msg {
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.86em;
+            margin-top: 8px;
+            display: none;
+        }
+        .status-msg.show   { display: block; }
+        .status-msg.error  { background: #ffeef0; color: var(--red); border: 1px solid #f5c2c7; }
+        .status-msg.success{ background: #d1e7dd; color: #0a3622; border: 1px solid #a3cfbb; }
+        .status-msg.info   { background: #cfe2ff; color: #084298; border: 1px solid #b6d4fe; }
+
+        /* ===== SPINNER ===== */
+        .spinner {
+            display: none;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255,255,255,0.4);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            flex-shrink: 0;
+        }
+        .spinner.show { display: inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ===== SEPARADOR DE SEÇÃO (dentro de painel) ===== */
+        .section-divider {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 16px 0;
+        }
+
+        /* ===== CAIXA DE FERRAMENTAS — grid de botões ===== */
+        .tools-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        /* ===== EXPLORADOR ===== */
+        .explorer-breadcrumbs {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+            padding: 8px 16px;
+            background: #f0f2f5;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.88em;
+        }
+        .explorer-breadcrumbs a {
+            color: var(--accent);
+            text-decoration: none;
+            cursor: pointer;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+        .explorer-breadcrumbs a:hover { background: #e0e8ff; }
+        .explorer-breadcrumbs .sep { color: #bbb; }
+        .explorer-breadcrumbs .current { color: var(--text); font-weight: 600; padding: 1px 5px; }
+
+        .file-table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+        .file-table th {
+            border-bottom: 2px solid var(--border);
+            padding: 9px 14px;
+            text-align: left;
+            color: var(--text-muted);
+            font-weight: 700;
+            font-size: 0.8em;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .file-table td { padding: 8px 14px; border-bottom: 1px solid #f0f0f0; }
+        .file-table tr:hover td { background: #f8f9fa; }
+
+        .file-link {
+            text-decoration: none;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+        .file-link:hover { color: var(--accent); }
+
+        .col-date, .col-size { color: var(--text-muted); width: 160px; }
+        .empty-dir { text-align: center; color: var(--text-muted); padding: 40px; font-size: 0.9em; }
+        .loading-row td { padding: 30px; text-align: center; color: var(--text-muted); }
     </style>
 </head>
 <body>
-    <header>
-        <div class="breadcrumbs" id="breadcrumbs">
+
+<header>
+    <div class="logo">🌊 VC Workspace</div>
+    <div class="work-dir" id="header-workdir">—</div>
+    <button class="btn-shutdown" onclick="desligarServidor()">⏹️ Desligar</button>
+</header>
+
+<main>
+
+    <!-- ═══════════════════════════════════════════════
+         PAINEL 1 — QUERY SQL RÁPIDA (inicia recolhido)
+    ════════════════════════════════════════════════ -->
+    <div class="panel">
+        <div class="panel-header collapsed" onclick="togglePanel(this)">
+            <span>⚡</span>
+            <span class="panel-title">Query SQL Rápida</span>
+            <span class="panel-toggle">▼</span>
+        </div>
+        <div class="panel-body hidden" id="panel-query-body">
+            <div class="field">
+                <label>Banco de dados</label>
+                <select id="q-db-select"><option value="">— carregando... —</option></select>
             </div>
-        <button onclick="desligarServidor()" style="background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.9em; display: flex; align-items: center; gap: 8px; transition: background 0.2s;">
-            ⏹️ Desligar Servidor
-        </button>
-    </header>
-    <main>
-        <table>
-            <thead>
-                <tr>
-                    <th>Nome</th>
-                    <th class="col-date">Data de Modificação</th>
-                    <th class="col-size">Tamanho</th>
-                </tr>
-            </thead>
-            <tbody id="file-list">
-                <tr><td colspan="3">Carregando...</td></tr>
-            </tbody>
-        </table>
-    </main>
+            <div class="field">
+                <label>SQL</label>
+                <textarea id="q-sql" rows="6"
+                    placeholder="SELECT * FROM chaveNroTudao WHERE ChNrClassifs LIKE '%[12]%' LIMIT 100"></textarea>
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="executarQuery()" id="btn-run-query">
+                    <span class="spinner" id="spinner-query"></span>▶ Executar
+                </button>
+                <button class="btn btn-ghost" onclick="limparQuery()">✕ Limpar</button>
+            </div>
+            <div class="status-msg" id="query-status"></div>
+            <div id="query-result-wrap">
+                <div id="query-result-label"></div>
+                <div id="query-result"></div>
+                <div class="query-meta" id="query-meta"></div>
+            </div>
+        </div>
+    </div>
 
-    <script>
-        const fileListEl = document.getElementById('file-list');
-        const breadcrumbsEl = document.getElementById('breadcrumbs');
+    <!-- ═══════════════════════════════════════════════
+         PAINEL 2 — RELATÓRIO AD-HOC (inicia recolhido)
+    ════════════════════════════════════════════════ -->
+    <div class="panel">
+        <div class="panel-header collapsed" onclick="togglePanel(this)">
+            <span>📊</span>
+            <span class="panel-title">Relatório Ad-hoc (SQL → MD / Excel / TSV)</span>
+            <span class="panel-toggle">▼</span>
+        </div>
+        <div class="panel-body hidden" id="panel-adhoc-body">
+            <div class="field">
+                <label>Banco principal</label>
+                <select id="r-db-select"><option value="">— carregando... —</option></select>
+            </div>
+            <div class="field">
+                <label>SQL</label>
+                <textarea id="r-sql" rows="5"
+                    placeholder="SELECT * FROM chaveNroTudao LIMIT 1000"></textarea>
+            </div>
+            <div class="field">
+                <label>Nome do arquivo de saída</label>
+                <input type="text" id="r-out" placeholder="resultado.xlsx" value="resultado.xlsx">
+            </div>
+            <div class="field">
+                <label>ATTACH adicional — caminho do banco</label>
+                <input type="text" id="r-attach-path" placeholder="caminho/para/osf123.sqlite">
+            </div>
+            <div class="field">
+                <label>ATTACH — alias</label>
+                <input type="text" id="r-attach-alias" placeholder="osf">
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-success" onclick="gerarRelatorio()" id="btn-run-report">
+                    <span class="spinner" id="spinner-report"></span>⬇️ Gerar e Baixar
+                </button>
+                <button class="btn btn-ghost" onclick="limparRelatorio()">✕ Limpar</button>
+            </div>
+            <div class="status-msg" id="report-status"></div>
+        </div>
+    </div>
 
-        // Pega a rota atual a partir do hash da URL (Ex: #/_mds)
-        function getCurrentPath() {
-            let hash = window.location.hash.substring(1);
-            if (hash.startsWith('/')) hash = hash.substring(1);
-            return decodeURIComponent(hash);
+    <!-- ═══════════════════════════════════════════════
+         PAINEL 3 — CAIXA DE FERRAMENTAS (inicia recolhido)
+    ════════════════════════════════════════════════ -->
+    <div class="panel">
+        <div class="panel-header collapsed" onclick="togglePanel(this)">
+            <span>🧰</span>
+            <span class="panel-title">Ferramentas</span>
+            <span class="panel-toggle">▼</span>
+        </div>
+        <div class="panel-body hidden" id="panel-tools-body">
+            <div class="tools-grid">
+                <!-- Abre markdown-it.html sem ?file= → modo ad-hoc com dropzone -->
+                <a class="btn btn-dark"
+                   href="/md_viewer"
+                   target="_blank"
+                   title="Abre o visualizador de Markdown em branco para subir qualquer arquivo .md">
+                    📝 Visualizador MD (ad-hoc)
+                </a>
+                <!-- Espaço para futuras ferramentas -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════
+         PAINEL 4 — EXPLORADOR DE ARQUIVOS (inicia recolhido)
+    ════════════════════════════════════════════════ -->
+    <div class="panel">
+        <div class="panel-header collapsed" onclick="togglePanel(this)">
+            <span>📁</span>
+            <span class="panel-title">Explorador de Arquivos</span>
+            <span class="panel-toggle">▼</span>
+        </div>
+        <div class="panel-body hidden" id="panel-explorer-body" style="padding:0">
+            <div class="explorer-breadcrumbs" id="breadcrumbs">
+                <a href="#/">🏠 Raiz da Auditoria</a>
+            </div>
+            <table class="file-table">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th class="col-date">Modificado</th>
+                        <th class="col-size">Tamanho</th>
+                    </tr>
+                </thead>
+                <tbody id="file-list">
+                    <tr class="loading-row"><td colspan="3">Aguardando abertura do painel...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<script>
+// =====================================================================
+// PAINÉIS RETRÁTEIS
+// =====================================================================
+function togglePanel(headerEl) {
+    const wasCollapsed = headerEl.classList.contains('collapsed');
+    headerEl.classList.toggle('collapsed');
+    const body = headerEl.nextElementSibling;
+    body.classList.toggle('hidden');
+
+    // Lazy-load do explorador: só carrega quando o painel for aberto pela 1ª vez
+    if (wasCollapsed && headerEl.closest('.panel') === document.getElementById('panel-explorer-body')?.closest('.panel')) {
+        const tbody = document.getElementById('file-list');
+        if (tbody.querySelector('.loading-row')) carregarArquivos();
+    }
+}
+
+// =====================================================================
+// UTILITÁRIOS
+// =====================================================================
+function showStatus(elId, msg, type) {
+    const el = document.getElementById(elId);
+    el.textContent = msg;
+    el.className = `status-msg show ${type}`;
+}
+function hideStatus(elId) { document.getElementById(elId).className = 'status-msg'; }
+
+function escHtml(str) {
+    return String(str)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function setLoading(btnId, spinnerId, on) {
+    document.getElementById(btnId).disabled = on;
+    document.getElementById(spinnerId).classList.toggle('show', on);
+}
+
+// =====================================================================
+// INIT: carrega work_dir e bancos disponíveis
+// =====================================================================
+async function init() {
+    try {
+        const res  = await fetch('/api/info');
+        const data = await res.json();
+
+        if (data.work_dir) {
+            document.getElementById('header-workdir').textContent = data.work_dir;
+        }
+        const banks = data.banks || [];
+        populateBankSelect('q-db-select', banks, data.default_bank);
+        populateBankSelect('r-db-select', banks, data.default_bank);
+    } catch {
+        populateBankSelect('q-db-select', [], null);
+        populateBankSelect('r-db-select', [], null);
+    }
+}
+
+function populateBankSelect(id, banks, defaultBank) {
+    const sel = document.getElementById(id);
+    if (!banks.length) {
+        sel.innerHTML = '<option value="">— nenhum banco encontrado —</option>';
+        return;
+    }
+    sel.innerHTML = banks.map(b =>
+        `<option value="${escHtml(b.path)}" ${b.path === defaultBank ? 'selected' : ''}>${escHtml(b.name)}</option>`
+    ).join('');
+}
+
+// =====================================================================
+// QUERY SQL RÁPIDA
+// =====================================================================
+async function executarQuery() {
+    const db  = document.getElementById('q-db-select').value;
+    const sql = document.getElementById('q-sql').value.trim();
+
+    if (!db)  { showStatus('query-status','Selecione um banco de dados.','error'); return; }
+    if (!sql) { showStatus('query-status','Digite uma query SQL.','error'); return; }
+
+    hideStatus('query-status');
+    setLoading('btn-run-query','spinner-query', true);
+    document.getElementById('query-result-wrap').classList.remove('show');
+
+    try {
+        const res  = await fetch('/api/query', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({db, sql})
+        });
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+            showStatus('query-status', data.error || 'Erro ao executar query.', 'error');
+            return;
+        }
+        renderQueryResult(data);
+    } catch {
+        showStatus('query-status','Falha na comunicação com o servidor.','error');
+    } finally {
+        setLoading('btn-run-query','spinner-query', false);
+    }
+}
+
+function renderQueryResult(data) {
+    const rows = data.rows    || [];
+    const cols = data.columns || [];
+
+    document.getElementById('query-result-label').textContent =
+        `Resultado — ${rows.length} linha(s)${data.truncated ? ` (limitado a ${data.limit})` : ''}`;
+
+    const result = document.getElementById('query-result');
+    if (!rows.length) {
+        result.innerHTML = '<div style="padding:20px;text-align:center;color:#888">Consulta retornou 0 linhas.</div>';
+    } else {
+        const head = '<thead><tr>' + cols.map(c => `<th>${escHtml(c)}</th>`).join('') + '</tr></thead>';
+        const body = '<tbody>' + rows.map(r =>
+            '<tr>' + r.map(v => `<td>${v === null ? '<i style="color:#bbb">null</i>' : escHtml(String(v))}</td>`).join('') + '</tr>'
+        ).join('') + '</tbody>';
+        result.innerHTML = `<table>${head}${body}</table>`;
+    }
+
+    const elapsed = data.elapsed_ms ? ` · ${data.elapsed_ms}ms` : '';
+    document.getElementById('query-meta').textContent = elapsed ? `Executado em ${data.elapsed_ms}ms` : '';
+    document.getElementById('query-result-wrap').classList.add('show');
+}
+
+function limparQuery() {
+    document.getElementById('q-sql').value = '';
+    document.getElementById('query-result-wrap').classList.remove('show');
+    hideStatus('query-status');
+}
+
+// =====================================================================
+// RELATÓRIO AD-HOC
+// =====================================================================
+async function gerarRelatorio() {
+    const db          = document.getElementById('r-db-select').value;
+    const sql         = document.getElementById('r-sql').value.trim();
+    const outName     = document.getElementById('r-out').value.trim() || 'resultado.xlsx';
+    const attachPath  = document.getElementById('r-attach-path').value.trim();
+    const attachAlias = document.getElementById('r-attach-alias').value.trim();
+
+    if (!db)  { showStatus('report-status','Selecione um banco de dados.','error'); return; }
+    if (!sql) { showStatus('report-status','Digite uma query SQL.','error'); return; }
+
+    hideStatus('report-status');
+    setLoading('btn-run-report','spinner-report', true);
+    showStatus('report-status','⏳ Gerando relatório...','info');
+
+    try {
+        const payload = {db, sql, out: outName};
+        if (attachPath && attachAlias) {
+            payload.attach = [{path: attachPath, alias: attachAlias}];
         }
 
-        // Renderiza a navegação superior (Breadcrumbs)
-        function renderBreadcrumbs(path) {
-            const parts = path.split('/').filter(p => p);
-            let html = `<a href="#/">🏠 Raiz da Auditoria</a>`;
-            
-            let currentAccumulatedPath = "";
-            parts.forEach((part, index) => {
-                currentAccumulatedPath += "/" + part;
-                html += `<span class="sep">/</span>`;
-                if (index === parts.length - 1) {
-                    html += `<span class="current">${part}</span>`; // Pasta atual (sem link)
-                } else {
-                    html += `<a href="#${currentAccumulatedPath}">${part}</a>`; // Pastas anteriores
-                }
-            });
-            breadcrumbsEl.innerHTML = html;
+        const res = await fetch('/api/export', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            showStatus('report-status', err.error || `Erro HTTP ${res.status}`, 'error');
+            return;
         }
 
-        // Gera a URL correta dependendo do tipo do arquivo
-        function getFileAction(item, currentPath) {
-            const fullPath = currentPath ? `${currentPath}/${item.name}` : item.name;
-            
-            if (item.is_dir) {
-                return `href="#/${fullPath}"`;
-            } else {
-                const ext = item.name.split('.').pop().toLowerCase();
-                
-                // MÁGICA: Se for MD, abre o markdown-it enviando a URL do arquivo bruto como ?file=
-                if (ext === 'md') {
-                    return `href="/md_viewer?file=/raw/${encodeURIComponent(fullPath)}" target="_blank"`;
-                } else {
-                    // Outros arquivos (HTML renderiza nativo, SQLite/Excel fazem download)
-                    return `href="/raw/${encodeURIComponent(fullPath)}" target="_blank"`;
-                }
-            }
+        const blob = await res.blob();
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url; a.download = outName;
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showStatus('report-status', `✅ "${outName}" baixado com sucesso!`, 'success');
+    } catch {
+        showStatus('report-status','Falha na comunicação com o servidor.','error');
+    } finally {
+        setLoading('btn-run-report','spinner-report', false);
+    }
+}
+
+function limparRelatorio() {
+    ['r-sql','r-attach-path','r-attach-alias'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('r-out').value = 'resultado.xlsx';
+    hideStatus('report-status');
+}
+
+// =====================================================================
+// EXPLORADOR DE ARQUIVOS
+// =====================================================================
+function getCurrentPath() {
+    let hash = window.location.hash.substring(1);
+    if (hash.startsWith('/')) hash = hash.substring(1);
+    return decodeURIComponent(hash);
+}
+
+function renderBreadcrumbs(path) {
+    const el    = document.getElementById('breadcrumbs');
+    const parts = path.split('/').filter(p => p);
+    let html    = `<a href="#/">🏠 Raiz</a>`;
+    let acc     = '';
+    parts.forEach((part, i) => {
+        acc += '/' + part;
+        html += `<span class="sep">/</span>`;
+        if (i === parts.length - 1) html += `<span class="current">${part}</span>`;
+        else html += `<a href="#${acc}">${part}</a>`;
+    });
+    el.innerHTML = html;
+}
+
+function getIcon(item) {
+    if (item.is_dir) return '📁';
+    const ext = (item.name.split('.').pop() || '').toLowerCase();
+    const map  = {md:'📝', html:'🌐', xlsx:'📊', sqlite:'🗄️', db:'🗄️', db3:'🗄️', txt:'📄', py:'🐍', toml:'⚙️', bat:'⚙️'};
+    return map[ext] || '📄';
+}
+
+function getFileHref(item, currentPath) {
+    const fullPath = currentPath ? `${currentPath}/${item.name}` : item.name;
+    if (item.is_dir) return `href="#/${fullPath}"`;
+    const ext = (item.name.split('.').pop() || '').toLowerCase();
+    if (ext === 'md') return `href="/md_viewer?file=/raw/${encodeURIComponent(fullPath)}" target="_blank"`;
+    return `href="/raw/${encodeURIComponent(fullPath)}" target="_blank"`;
+}
+
+async function carregarArquivos() {
+    const path  = getCurrentPath();
+    renderBreadcrumbs(path);
+    const tbody = document.getElementById('file-list');
+    tbody.innerHTML = '<tr class="loading-row"><td colspan="3">Carregando...</td></tr>';
+
+    try {
+        const res  = await fetch(`/api/ls/${encodeURIComponent(path)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        if (!data.items.length) {
+            tbody.innerHTML = '<tr><td colspan="3" class="empty-dir">Pasta vazia.</td></tr>';
+            return;
         }
 
-        // Busca a lista de arquivos da API
-        async function carregarArquivos() {
-            const currentPath = getCurrentPath();
-            renderBreadcrumbs(currentPath);
-            fileListEl.innerHTML = '<tr><td colspan="3">Carregando...</td></tr>';
-
-            try {
-                const res = await fetch(`/api/ls/${encodeURIComponent(currentPath)}`);
-                if (!res.ok) throw new Error("Erro ao acessar a pasta. Verifique se ela existe.");
-                
-                const data = await res.json();
-                
-                if (data.items.length === 0) {
-                    fileListEl.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #888;">Esta pasta está vazia.</td></tr>';
-                    return;
-                }
-
-                let html = "";
-                
-                // Botão de "Voltar" (..) se não estiver na raiz
-                if (currentPath !== "") {
-                    const parentPath = currentPath.split('/').slice(0, -1).join('/');
-                    html += `
-                        <tr>
-                            <td><a class="item-link" href="#/${parentPath}"><span class="icon">📁</span>..</a></td>
-                            <td class="col-date">-</td>
-                            <td class="col-size">-</td>
-                        </tr>
-                    `;
-                }
-
-                data.items.forEach(item => {
-                    const icon = item.is_dir ? '📁' : (item.name.endsWith('.md') ? '📝' : (item.name.endsWith('.html') ? '🌐' : '📄'));
-                    const action = getFileAction(item, currentPath);
-                    
-                    html += `
-                        <tr>
-                            <td>
-                                <a class="item-link" ${action}>
-                                    <span class="icon">${icon}</span> ${item.name}
-                                </a>
-                            </td>
-                            <td class="col-date">${item.modified}</td>
-                            <td class="col-size">${item.size}</td>
-                        </tr>
-                    `;
-                });
-                
-                fileListEl.innerHTML = html;
-
-            } catch (error) {
-                fileListEl.innerHTML = `<tr><td colspan="3" class="msg-erro">Falha: ${error.message}</td></tr>`;
-            }
+        let html = '';
+        if (path !== '') {
+            const parent = path.split('/').slice(0,-1).join('/');
+            html += `<tr>
+                <td><a class="file-link" href="#/${parent}"><span>📁</span> ..</a></td>
+                <td class="col-date">—</td><td class="col-size">—</td>
+            </tr>`;
         }
 
-        // Escuta mudanças no hash (Botão voltar do navegador) para recarregar a lista
-        window.addEventListener('hashchange', carregarArquivos);
+        data.items.forEach(item => {
+            html += `<tr>
+                <td><a class="file-link" ${getFileHref(item, path)}><span>${getIcon(item)}</span> ${escHtml(item.name)}</a></td>
+                <td class="col-date">${item.modified}</td>
+                <td class="col-size">${item.size}</td>
+            </tr>`;
+        });
+        tbody.innerHTML = html;
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="3" class="empty-dir" style="color:#dc3545">Falha: ${escHtml(e.message)}</td></tr>`;
+    }
+}
 
-        function desligarServidor() {
-            fetch('/api/shutdown', { method: 'POST' }).then(() => {
-                // Limpa a tela e avisa que já pode fechar a aba
-                document.body.innerHTML = `
-                    <div style="display:flex; justify-content:center; align-items:center; height:100vh; flex-direction:column; background:#f8f9fa;">
-                        <h2 style="color:#333; margin-bottom:10px;">💤 Servidor desligado com sucesso.</h2>
-                        <p style="color:#666;">O terminal foi liberado. Você já pode fechar esta aba.</p>
-                    </div>`;
-            }).catch(e => console.error("Erro ao desligar:", e));
-        }
+// Quando o explorador for aberto e a hash mudar, recarrega
+window.addEventListener('hashchange', () => {
+    const explorerPanel = document.getElementById('panel-explorer-body');
+    if (!explorerPanel.classList.contains('hidden')) carregarArquivos();
+});
 
-        // Carrega inicialmente
-        carregarArquivos();
-    </script>
+// =====================================================================
+// DESLIGAR
+// =====================================================================
+function desligarServidor() {
+    fetch('/api/shutdown', {method:'POST'}).then(() => {
+        document.body.innerHTML = `
+            <div style="display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;background:#f8f9fa">
+                <h2 style="color:#333;margin-bottom:10px">💤 Servidor desligado.</h2>
+                <p style="color:#666">Você já pode fechar esta aba.</p>
+            </div>`;
+    }).catch(()=>{});
+}
 
-
-    </script>
+// =====================================================================
+// BOOT
+// =====================================================================
+init();
+</script>
 </body>
 </html>

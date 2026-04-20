@@ -1,8 +1,11 @@
 [project]
-name = "sfiaweb"
+name = "vc-sfiaweb"
 version = "0.1.0"
 description = "Servidor de Interface e Relatórios VC"
 requires-python = "==3.12.*"
+authors = [
+    { name = "pmarote" }
+]
 dependencies = [
     "fastapi",
     "uvicorn[standard]",

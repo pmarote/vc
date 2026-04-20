@@ -148,9 +148,11 @@ MAPA_TABELAS = {
     "fiscal_DocClassificado": "DocAtrib_fiscal_DocClassificado",
 }
 
-def merge_safic_databases(out_db_path: Path, source_dir: Path):
+def merge_safic_databases(out_db_path: Path, source_dir: Path, all_tables: bool = False):
     print(f"\n🎯 Iniciando Consolidação Safic")
     print(f"📂 Lendo diretório: {source_dir.resolve()}")
+    if all_tables:
+        print(f"⚠️ MODO EXPANDIDO: Importando TODAS as tabelas com regras dinâmicas.")
     
     if not source_dir.exists() or not source_dir.is_dir():
         print(f"❌ Diretório não encontrado: {source_dir}")
@@ -179,9 +181,23 @@ def merge_safic_databases(out_db_path: Path, source_dir: Path):
         tabelas_origem = [row[0] for row in cursor_final.fetchall()]
         
         for tabela_original in tabelas_origem:
+            tabela_destino = None
+            
+            # 1. Verifica primeiro o override explícito (MAPA_TABELAS)
             if tabela_original in MAPA_TABELAS:
                 tabela_destino = MAPA_TABELAS[tabela_original]
                 
+            # 2. Se não achou e a flag --all-tables estiver ativada, aplica a regra dinâmica
+            elif all_tables:
+                if "_DocAtrib_" in db_path.name:
+                    tabela_destino = f"DocAtrib_{tabela_original}"
+                elif "_Dfe_" in db_path.name:
+                    tabela_destino = f"Dfe_{tabela_original}"
+                else:
+                    tabela_destino = f"_{tabela_original}"
+            
+            # Se a tabela ganhou um destino (pelo mapa ou pela regra), faz o merge
+            if tabela_destino:
                 # Verifica se a tabela já foi criada no banco final
                 cursor_final.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?;", (tabela_destino,))
                 existe = cursor_final.fetchone()

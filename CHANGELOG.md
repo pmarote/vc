@@ -2,8 +2,40 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
-## [0.4.7] - 2026-04
+## [0.4.8] - 2026-04
 - versão em desenvolvimento
+
+# Changelog
+
+Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
+
+## [0.4.7] - 2026-04
+Esta versão focou massivamente em produtividade, na consolidação do `sfiaweb` como Estação de Trabalho principal, na implementação de Templates Dinâmicos em Markdown e na refatoração do CLI para maior segurança.
+
+### Arquitetura e Gestão de Ambiente
+- **Fechei com Python 3.12:** Não se permite 3.13 ou 3.14, porque todos os `pyproject.toml` estão agora com `requires-python = "==3.12.*"`, que recebe correções de segurança até outubro de 2028. Descobri isso ao mexer com o Linux Mint que, para focar em estabilidade, entende que 3.12 é o ponto de equilíbrio ideal entre recursos novos e estabilidade.
+
+### Novo Recurso: Templates Dinâmicos (Literate Documents)
+
+### Microapp `sfiaweb` (A Nova Estação de Trabalho)
+- **Dashboard Tático:** Refatoração do `index.html` com painéis retráteis (Explorador, Relatório Ad-Hoc, Consultas Rápidas), lazy loading e feedback visual dinâmico.
+- **Consultas Rápidas (SQL Inline):** Novo endpoint POST `/api/query` em `server.py` executando leitura `read-only` no SQLite e devolvendo JSON para renderização de tabelas instantâneas no front-end.
+- **Anotações Inteligentes (Vibe Coding):** Restauração do modo de edição `contenteditable` no `markdown-it.html` com atalho global `Ctrl+S` para download do HTML renderizado e anotado (Standalone HTML).
+
+### Microapp `sfia_safic` (CLI e Core)
+- **Templates Dinâmicos (`*.tmpl.md`)** como documento-fonte de auditoria, composto por texto livre em Markdown, frontmatter obrigatório de contexto, variáveis interpoláveis e blocos SQL executáveis. A especificação conceitual dos templates está em [SFIA_TMPL_SPEC.md](SFIA_TMPL_SPEC.md)
+- **Novo Fluxo de Inicialização:** Introdução do comando `init --dir <caminho>`. Obriga que a pasta seja limpa e contenha apenas `osf.sqlite` (nova convenção de nomenclatura simplificada, substituindo os numerais longos).
+- **Setup Automático:** O `init` copia automaticamente modelos essenciais (`auditoria.tmpl.md` e `TrabPaulo.xlsm`) para a raiz do workspace ativo.
+- **Estado Persistente:** O diretório de trabalho é gravado em `var/sfia_config.toml`, abolindo o parâmetro `--dir` das outras execuções (`build`, `report`, `template`).
+- **Histórico Persistente (`query_history.sqlite`):** O módulo `to_markdown.py` agora grava secretamente todas as consultas SQL executadas (sucesso, linhas e SQL) em um banco de histórico (Trilha de Auditoria).
+- **Proteção Visual:** Função `fmt_br` aprimorada para escapar tags HTML invisíveis acidentais (`<`, `>`) e padronizar o alinhamento financeiro de números inteiros para float (`.00`).
+
+### Utilitários (`utils`)
+- **Novo `mapeador_sqlite.py`:** Ferramenta que infere e cruza Chaves Primárias e Estrangeiras no SAFIC com base na posição da coluna (`cid=0`). Possui modo CLI com subcomandos `map` (para gerar o schema consolidado) e `search` (para pesquisar cruzamentos e exibir em Markdown).
+- **Evolução do `sqlite_dump.py`:** Adição da flag `--hide-empty` para ocultar documentação de tabelas e views vazias, além de limpeza de quebras de linha nas strings DDL.
+
+### Importador SAFIC (`importador_safic`)
+- **Importação Dinâmica Expansiva:** Adição da flag `--all-tables` no comando `merge`. Se ativada, puxa tabelas não cadastradas no `MAPA_TABELAS`, inferindo prefixos contextuais (`DocAtrib_`, `Dfe_`, `_`) com base no nome original do banco de dados.
 
 ## [0.4.6] - 2026-04-19
 
