@@ -3,7 +3,7 @@ sfiaweb/server.py — Servidor local VC (FastAPI)
 
 Endpoints:
   GET  /                  → index.html (dashboard)
-  GET  /md_viewer         → markdown-it.html
+  GET  /md_viewer         → md-viewer-pm.html
   GET  /api/info          → work_dir + lista de bancos disponíveis
   GET  /api/ls/{subpath}  → listagem de diretório
   GET  /raw/{subpath}     → servir arquivo físico
@@ -125,9 +125,9 @@ def ler_index():
 
 @app.get("/md_viewer", response_class=HTMLResponse)
 def ler_md_viewer():
-    viewer_path = SFIAWEB_DIR / "markdown-it.html"
+    viewer_path = SFIAWEB_DIR / "md-viewer-pm.html"
     if not viewer_path.exists():
-        raise HTTPException(status_code=404, detail="markdown-it.html não encontrado.")
+        raise HTTPException(status_code=404, detail="md-viewer-pm.html não encontrado.")
     return viewer_path.read_text(encoding="utf-8")
 
 

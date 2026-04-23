@@ -2,12 +2,26 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
-## [0.4.8] - 2026-04
+
+## [0.4.9] - 2026-04
 - versão em desenvolvimento
 
-# Changelog
+## [0.4.8] - 2026-04
+Esta versão consolida a visão do sistema sfia como uma linguagem documental viva. O foco foi a implementação do **SFIA_TMPL_SPEC v0.3**, um motor de templates lineares (Parser Lexical) com namespace Python compartilhado, aproximando a experiência de auditoria do conceito de *Jupyter Notebooks Textuais*, mas com extrema segurança anti-recursividade.
 
-Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
+### Motor de Templates (Literate Document)
+*  **Novo Parser Linear** (`template_engine.py`): Refatoração massiva abandonando substituição Regex global (`re.sub`) por um Parser Top-to-Bottom. O documento agora é processado em fluxo, permitindo estado vivo.
+*  **Sintaxe Unificada v0.3**: - Fences de ação: `sql sfia` e `python sfia` para execução e sintaxe nos editores.
+    * Inlines de injeção: `{{ variavel }}`, `{{ py: expr }}` e `{{ sql: expr }}`.
+* **Namespace Python**: Variáveis do `sfia_config.toml` (Frontmatter YAML) agora são injetadas nativamente no escopo global do template para uso livre.
+* **Anti-Recursividade (Segurança)**: Motor blindado contra injeções. Se uma query do banco de dados retornar um texto com `{{ py: ... }}`, ele será impresso como string bruta, não como comando.
+* **Isolamento de Gravação**: O motor agora utiliza o módulo nativo tempfile (`tempfile.mkstemp`) em memória para acionar os formatadores de Markdown originais sem conflito de lock de arquivos no Windows.
+
+### Infraestrutura e Experiência do Desenvolvedor (DX)
+* **Novo Utilitário** `shortcuts.py`: Painel de atalhos rápidos de CLI (abre Explorer no work_dir ativo, servidor web, e viewer local).
+* **Terminal Blindado** (`terminal.bat`): - Alerta crítico e tela de bloqueio caso o usuário execute o projeto fora do drive `C:`.
+    * Alerta visual forte orientando a cópia/recuperação da pasta de ferramentas essenciais (`usr`).
+    * Adicionado comando `vcw` para iniciar o servidor web (sfiaweb) em uma nova janela de forma assíncrona, não travando o terminal atual.
 
 ## [0.4.7] - 2026-04
 Esta versão focou massivamente em produtividade, na consolidação do `sfiaweb` como Estação de Trabalho principal, na implementação de Templates Dinâmicos em Markdown e na refatoração do CLI para maior segurança.

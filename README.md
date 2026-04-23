@@ -13,7 +13,7 @@ Transformar bancos SQLite brutos em relatórios consistentes e auditáveis usand
 ## Principal funcionalidade: auditoria - sistema sfia
 
 - sfia é um sistema de auditoria.
-- Foi desenvolvido com foco em produtividade, relatórios SQL dinâmicos, anotações de auditoria in-loco (em Markdown e HTML) e automação de cadernos documentais (*Literate Programming*).
+- Foi desenvolvido com foco em produtividade, relatórios SQL dinâmicos, anotações de auditoria in-loco (em Markdown e HTML) e automação de cadernos documentais (*Literate Programming*  através da sintaxe `SFIA_TMPL_SPEC`).
 - Usa microapps do VC para exploração, consulta rápida, exportação ad-hoc e leitura/anotação de artefatos. Opera sobre o *work_dir* ativo gravado no contexto, dentro dos conceitos sfia, com pasta de trabalho inicializada rigorosamente. As subpastas internas incluem `_dbs` (bancos SQLite e históricos), `_mds` (arquivos markdown materiais e outputs de templates) e `_xls` (arquivos Excel de suporte).
 
 ## Características do VC
@@ -72,21 +72,40 @@ O arquivo `terminal.bat` na raiz configura o ambiente UTF-8 e define atalhos (**
 ## 🚀 Como Iniciar
 
 1. Clone o repositório.
-2. Execute o arquivo `terminal.bat` na raiz. Leia com atenção as instruções que aparecerão.
-3. Coloque o arquivo de dados original (`osf.sqlite`) sozinho em uma pasta vazia.
-4. Inicialize a auditoria, compile o banco e abra o Dashboard:
+2. Execute o arquivo (duplo click) `terminal.bat` na raiz. Leia com atenção as instruções que aparecerão.
+3. Coloque o arquivo de dados original (`osf.sqlite`) sozinho em uma pasta vazia. Essa pasta, por padrão, terá o nome `sfia`.
+4. Inicialize a auditoria, compile o banco e abra o Dashboard, tudo via **terminal**:
    ```bash
-   # 1. Preparar e organizar o workspace (pasta deve estar limpa e conter apenas o osf.sqlite)
-   vc sfia_safic main.py init --dir D:/Auditorias/EmpresaX
-
-   # 2. Gerar banco consolidado SIA (o CLI já sabe onde o workspace está)
+   # 1. Lista microapps disponíveis
+   vcdir
+   # 2. Executa o primeiro microapp. Comece por sfia_safic. A porta de entrada é sempre main.py. Comece com -h pra entender.
+   vc sfia_safic main.py -h
+   # 3. Pela ordem, vamos iniciar. Primeiro -h para entender
+   vc sfia_safic main.py init -h
+   # 4. Conforme instruções, quando se usa o comando `init`, ele pedir --dir, que é a pasta `sfia` com `osf.sqlite`
+   vc sfia_safic main.py init --dir C:(...)\\sfia
+   # 5. Olhe essa pasta C:(...)\\sfia no Windows Explorer. Ela mudou completamente.
+   #    5.1. Todas as mudanças apareceram no terminal quando vc deu o último comando acima. Leia uma a uma e confronte com o Windows Explorer.
+   # 6. Construa (ou compile, use o verbo que quiser) o banco de dados. Observe no Windows Explorer a criação do novo db sqlite.
    vc sfia_safic main.py build
-
-   # 3. Processar templates textuais de auditoria (*.tmpl.md)
+   # 7. Gere todos os relatórios pré disponíveis. Leia tudo o que vai sendo aparecendo no terminal.
+   vc sfia_safic main.py report
+   vc sfia_safic main.py report_oper
+   vc sfia_safic main.py report_item
+   # 8. Abra o Dashboard e divirta-se no mundo web. Ele está acessível em [http://127.0.0.1:5678](http://127.0.0.1:5678)
+   vcw
+   ```
+5. O **terminal** agora ficou dedicado ao servidor web, que chamei de Dashboard. Ele está acessível em [http://127.0.0.1:5678](http://127.0.0.1:5678):
+6. Explore o Dashboard a vontade. Acostume-se a visualizar o Markdown renderizado em `Explorador de Arquivos` e também em `Ferramentas` - `Visualizador MD (ad-hoc)` onde, neste caso, vc tem que arrastar o arquivo Markdown `*.md` do Windows Explorer para seu browser. 
+7. Por isso, para continuar, execute o arquivo  (duplo click) `terminal.bat` na raiz para abrir um novo terminal. Releia com atenção as instruções que aparecerão.
+   ```bash   
+   # 9. Digite wm, dbb, ct, mp e explore WinMerge, DBBrowser, CudaText, Markpad(Editor .md). Eles também podem ser executados com o nome do arquivo desejado para trabalho digitando-se o nome do mesmo em seguida.
+   wm
+   dbb
+   ct
+   mp
+   # 10. O último passo é o o processamento de templates textuais de auditoria (*.tmpl.md). Eles sempre estarão na rais de `sfia`, pasta C:(...)\\sfia. Vá editando os templates, verifique as instruções, é um mundo sem sim. Acompanhe essa pasta `sfia` pelo Windows Explorer e vá mudando seus arquivos no que for necessário
    vc sfia_safic main.py template
-
-   # 4. Iniciar Estação de Trabalho
-   vc sfiaweb server.py 
    ```
 
 ---

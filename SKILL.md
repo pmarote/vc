@@ -1,6 +1,6 @@
 ---
 name: vc
-version: "0.4.7"
+version: "0.4.8"
 type: monorepo
 stack: python, sqlite, uv, markdown, html
 os: windows, linux
@@ -48,13 +48,13 @@ Para detalhes completos, leia o [README.md](README.md).
 - Cada microapp é editado de forma isolada
 - O contexto atual do sistema é sempre guiado pelo arquivo `var/sfia_config.toml` (o CLI lida com isso sozinho).
 - Arquivos temporários e logs gravados em `var/` (ignorada pelo git)
+- Templates: O motor de templates (template_engine.py) usa a arquitetura Lexical/Linear (Passada única de cima para baixo). O estado das variáveis se mantém no documento. A definição conceitual completa dos templates está na pasta raiz, em [SFIA_TMPL_SPEC.md](SFIA_TMPL_SPEC.md).
 - Manter o isolamento: alterações num microapp não devem afetar o `pyproject.toml` de outro.
 - Imports entre módulos do mesmo microapp usam caminhos relativos simples
 
 **Não fazer:**
 - Não criar `config.toml` na raiz (foi removido intencionalmente)
 - Não sugerir instalação global de pacotes (`pip install`). Sempre modificar o `pyproject.toml` e usar `uv add`.
-- Não inserir lógicas interativas nos relatórios básicos em Markdown. A interatividade pertence ao frontend (`sfiaweb`).
 
 ---
 

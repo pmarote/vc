@@ -78,39 +78,90 @@
         }
 
         /* ============================================================
-           TOOLBAR
+           MENU SUSPENSO (Hover) DIREITO
            ============================================================ */
-        #toolbar {
-            display: none;
-            position: sticky;
-            top: 0;
+        #side-menu {
+            display: none; /* Só aparece após carregar o arquivo */
+            position: fixed;
+            top: 30px; 
+            right: -240px; /* Esconde o corpo do menu fora da tela */
+            left: auto;
+            width: 240px;
+		    background-color: rgba(255, 255, 255, 0.9); /* Opaco com 10% de transparência */
+		    backdrop-filter: blur(1px); /* Opcional: dá um efeito de desfoque no fundo, igual ao Windows */
+            padding: 5px 15px; /* era padding: 20px 15px; */
+            border-radius: 8px 0 0 8px; /* Borda invertida */
             z-index: 100;
-            background: var(--navy);
-            color: #e0ddd8;
-            padding: 0 20px;
-            height: 46px;
-            align-items: center;
-            gap: 14px;
-            font-family: var(--font-sans);
-            font-size: 0.82rem;
-            box-shadow: 0 1px 0 rgba(255,255,255,0.05), 0 2px 12px rgba(0,0,0,0.3);
+            flex-direction: column;
+            /* gap: 12px; */
+            box-shadow: -4px 4px 20px rgba(0,0,0,0.2); /* Sombra invertida */
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        #toolbar.visible { display: flex; }
 
-        #toolbar-filename {
-            flex: 1;
-            font-weight: 500;
-            color: #7fb8e8;
+        #side-menu.visible {
+            display: flex;
+        }
+
+        /* Aba que segura o ícone SVG e serve de gatilho */
+        #side-menu-tab {
+            position: absolute;
+            top: 10px;
+            left: -34px; /* Fica 34px para fora, à esquerda do menu que está escondido na direita */
+            width: 34px;
+            height: 34px;
+            background-color: rgba(255, 255, 255, 0.4); 
+            backdrop-filter: blur(1px);
+            color: #777; /* Cor padrão da engrenagem */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px 0 0 8px;
+            cursor: pointer;
+            box-shadow: -3px 0 10px rgba(0,0,0,0.1);
+            transition: color 0.2s, background-color 0.2s;
+        }
+
+        /* O Efeito Hover Mágico */
+        #side-menu:hover {
+            transform: translateX(-240px); /* Puxa o menu para dentro da tela */
+        }
+        #side-menu:hover #side-menu-tab {
+            color: var(--accent); /* Engrenagem fica azul no hover */
+            background-color: rgba(255, 255, 255, 0.9);
+        }
+
+
+        /* --- Itens internos do Menu --- */
+        #side-menu-filename {
+            font-family: var(--font-sans);
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-main);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            letter-spacing: 0.01em;
+            /* padding-bottom: 6px; */
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            /* margin-bottom: 4px; */
+            text-align: center;
         }
 
-        #toolbar-hint {
-            color: #666;
-            font-size: 0.78rem;
+        #side-menu-hint {
+            color: #777;
+            font-size: 0.75rem;
             letter-spacing: 0.02em;
+            font-family: var(--font-sans);
+            text-align: center;
+            /* margin-top: 8px; */
+        }
+
+        #side-menu-version {
+            color: var(--text-main);
+            font-size: 0.65rem;
+            font-family: var(--font-sans);
+            text-align: center;
+            margin-top: 10px; /* Dá um leve distanciamento dos botões de cima */
+            letter-spacing: 0.05em;
         }
 
         #badge-edit {
@@ -118,24 +169,26 @@
             color: #fff;
             font-weight: 600;
             font-size: 0.72rem;
-            padding: 2px 9px;
-            border-radius: 3px;
+            padding: 4px;
+            border-radius: 4px;
             letter-spacing: 0.05em;
             text-transform: uppercase;
+            text-align: center;
             display: none;
         }
-        #badge-edit.visible { display: inline-block; }
+        #badge-edit.visible { display: block; }
 
         #btn-toggle-edit {
             background: transparent;
             border: 1px solid rgba(255,255,255,0.15);
-            color: #ccc;
-            padding: 4px 13px;
+            color: var(--text-main);
+            padding: 8px;
             border-radius: 4px;
             cursor: pointer;
             font-family: var(--font-sans);
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             transition: all 0.15s;
+            width: 100%;
         }
         #btn-toggle-edit:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.3); }
         #btn-toggle-edit.active { background: #e67e22; color: #fff; border-color: #e67e22; font-weight: 600; }
@@ -144,34 +197,17 @@
             background: var(--accent);
             border: none;
             color: #fff;
-            padding: 5px 15px;
+            padding: 8px;
             border-radius: 4px;
             cursor: pointer;
             font-family: var(--font-sans);
-            font-size: 0.8rem;
-            font-weight: 500;
-            transition: background 0.15s;
-        }
-        #btn-download:hover { background: var(--accent-dim); }
-
-        #save-flash {
-            position: fixed;
-            top: 54px;
-            right: 20px;
-            background: #15803d;
-            color: #fff;
-            padding: 9px 18px;
-            border-radius: 6px;
-            font-family: var(--font-sans);
             font-size: 0.85rem;
             font-weight: 500;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s;
-            z-index: 200;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+            transition: background 0.15s;
+            width: 100%;
         }
-        #save-flash.show { opacity: 1; }
+        #btn-download:hover { background: var(--accent-dim); }
+        
 
         /* ============================================================
            DROP ZONE
@@ -288,7 +324,7 @@
            TIPOGRAFIA — CORPO
            ============================================================ */
         #content p {
-            margin: 0 0 1.2em;
+            margin: 0 0 0.8em; /* era margin: 0 0 1.2em; */
             font-family: var(--font-serif);
         }
 
@@ -327,7 +363,7 @@
         }
 
         #content li {
-            margin-bottom: 0.4em;
+            margin-bottom: 0.1em;
             line-height: var(--lh-text);
         }
 
@@ -547,19 +583,21 @@
         /* ============================================================
            METADATA BOX (frontmatter YAML)
            ============================================================ */
-        .metadata-box {
+        /* jogue o #content na frente de .metadata simplesmente para preponderar
+           é que no CSS, um seletor de ID (#) é muito mais forte que um seletor de Classe (.) */
+        #content .metadata-box {
             background: #f3f1ec;
             border: 1px solid var(--border-mid);
             border-radius: 8px;
-            padding: 14px 18px;
-            margin-bottom: 2.5em;
+            padding: 0px 10px; /* era padding: 10px 10px; */
+            margin-bottom: 1em;
             font-family: var(--font-sans);
             /* font-size: var(--text-xs); */
         }
-        .metadata-box h3 {
-            margin: 0 0 10px;
+        #content .metadata-box h3 {
+            /* margin: 0 0 10px; */
             font-family: var(--font-sans);
-            font-size: 0.78em;
+            font-size: 1.0em; /* era font-size: 0.78em; */
             font-weight: 600;
             /* text-transform: uppercase; */
              letter-spacing: 0.07em;
@@ -567,34 +605,236 @@
             border: none;
             padding: 0;
         }
-        .metadata-box table { margin: 0; font-size: 1em; }
-        .metadata-box td, .metadata-box th {
+        #content .metadata-box table { margin: 0; /* font-size: 1em; */ }
+        #content .metadata-box td, .metadata-box th {
             padding: 3px 10px 3px 0;
             border: none;
             background: transparent;
             font-size: 1em;
         }
-        .metadata-box th {
+        #content .metadata-box th {
             font-weight: 500;
             color: var(--text-muted);
             text-transform: none;
             letter-spacing: 0;
-            width: 30%;
+            width: 20%;
+            text-align: right; /* <-- Nova linha aqui */
         }
+
+        /* ============================================================
+           Table of Contents (TOC)
+           ============================================================ */
+		#toc-container {
+		    position: fixed;
+		    top: 260px;
+		    right: 20px;
+		    width: 260px;
+		    max-height: calc(100vh - 300px);
+		    background-color: rgba(255, 255, 255, 0.8); /* Opaco com 20% de transparência */
+		    backdrop-filter: blur(1px); /* Opcional: dá um efeito de desfoque no fundo, igual ao Windows */
+		    border: 1px solid var(--border-mid);
+		    border-radius: 8px;
+		    padding: 15px;
+            overflow-y: auto;
+		    z-index: 100;
+		    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+		    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+		}
+
+		/* Classe para esconder o menu */
+		#toc-container.collapsed {
+		    transform: translateX(calc(100% + 40px));
+		    opacity: 0;
+		    pointer-events: none;
+		}
+
+		/* Botão de acionamento (Flutuante) */
+		#toc-toggle {
+		    position: fixed;
+		    top: 273px;
+		    right: 33px;
+		    z-index: 101;
+		    background: var(--accent-color);
+		    color: white;
+		    border: none;
+		    border-radius: 50%;
+		    width: 31px;
+		    height: 30px;
+		    cursor: pointer;
+		    display: flex;
+		    align-items: center;
+		    justify-content: center;
+		    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+		    transition: all 0.2s ease;
+		}
+
+		#toc-toggle:hover { transform: scale(1.1); }
+
+		#toc-container h3 {
+		    font-size: 0.8rem;
+		    text-transform: uppercase;
+		    letter-spacing: 1px;
+		    margin-bottom: 15px;
+		    opacity: 0.6;
+		}
+
+		/* Itens do TOC */
+		.toc-item {
+		    display: block;
+		    padding: 5px 0;
+		    font-size: 13px;
+		    color: var(--text-main);
+		    text-decoration: none;
+		    border-left: 2px solid transparent;
+		    padding-left: 10px;
+		    transition: all 0.2s;
+		    white-space: nowrap;
+		    overflow: hidden;
+		    text-overflow: ellipsis;
+		}
+
+		.toc-item:hover {
+		    color: var(--accent-color);
+		    padding-left: 15px;
+		}
+
+		/* Níveis de indentação baseados no H1, H2, H3 */
+		.toc-h2 { margin-left: 0px; font-weight: 600; }
+		.toc-h3 { margin-left: 15px; opacity: 0.8; }
+		.toc-h4 { margin-left: 30px; opacity: 0.6; font-size: 12px; }
+
+		/* Scrollbar fina igual ao Markpad */
+		#toc-container::-webkit-scrollbar { width: 4px; }
+		#toc-container::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
+
+
+        /* ============================================================
+           Barra superior aos códigos, estilo Gemini, ChatGPT, etc
+           ============================================================ */
+		/* Container que envolve o código e a barra */
+		.code-block-wrapper {
+		    position: relative;
+		    border-radius: 8px;
+		    margin: 20px 0;
+		    background: #1e1e1e; /* Fundo escuro padrão de código */
+		    /* overflow: hidden; */
+		    border: 1px solid var(--border-color);
+		}
+
+		/* Barra superior */
+		.code-block-header {
+		    display: flex;
+		    justify-content: space-between;
+		    align-items: center;
+		    padding: 3px 10px;
+		    background: var(--table-head-bg); /* A ideia é manter o padrão de cores das tabelas */
+		    color: var(--text-muted);
+		    font-weight: 600;
+		    font-size: 0.8em;
+		    border-bottom: 1px solid #3d3d3d;
+		}
+
+		/* Botão de copiar */.copy-btn {
+            background: transparent;
+            border: 1px solid transparent; /* Remove a borda padrão para focar no ícone */
+            color: var(--text-muted);
+            padding: 4px; /* Menor padding para acomodar apenas o SVG */
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            position: relative; /* Necessário para o Tooltip */
+        }
+
+        .copy-btn:hover {
+            background: #444;
+            color: white;
+        }
+
+        /* Tooltip (Hint) estilo Gemini puro em CSS */
+        .copy-btn::after {
+            content: attr(data-hint);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 6px;
+            background: #202124;
+            color: #e8eaed;
+            font-family: var(--font-sans);
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+
+        .copy-btn:hover::after {
+            opacity: 1;
+        }
+
+
+		/* Ajuste no bloco de código para não ter margem extra */
+		.code-block-wrapper pre {
+		    margin: 0 !important;
+		    /* border-radius: 0 !important; */
+            border-radius: 0 0 8px 8px !important; /* <-- Cantos inferiores arredondados */
+		}
+
+
+       /* ============================================================
+           TOAST NOTIFICATION (Estilo Gemini)
+          ============================================================ */
+        #toast-notification {
+            position: fixed;
+            bottom: 24px;
+            left: 24px;
+            background: #202124; /* Fundo escuro característico do Google/Gemini */
+            color: #e8eaed;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-family: var(--font-sans);
+            font-size: 0.9rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 9999;
+            opacity: 0;
+            transform: translateY(20px); /* Começa um pouco para baixo */
+            pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        #toast-notification.show {
+            opacity: 1;
+            transform: translateY(0); /* Sobe suavemente */
+        }
+
     </style>
 </head>
 <body>
 
-<!-- ===== TOOLBAR ===== -->
-<div id="toolbar">
-    <span id="toolbar-filename">—</span>
+<!-- ===== MENU SUSPENSO (Hover) DIREITO ===== -->
+<div id="side-menu">
+    <div id="side-menu-tab">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+    </div>
+    <div id="side-menu-filename">—</div>
     <span id="badge-edit">editando</span>
-    <span id="toolbar-hint">Ctrl+S salva como HTML</span>
     <button id="btn-toggle-edit">✏ Editar</button>
     <button id="btn-download">↓ Salvar HTML</button>
+    <div id="side-menu-hint">Ctrl+S salva como HTML</div>
+    <div id="side-menu-version">versão 0.5.7</div>
 </div>
 
-<div id="save-flash">✓ Download iniciado</div>
+<div id="toast-notification"></div>
 
 <!-- ===== DROP ZONE (modo ad-hoc) ===== -->
 <div id="dropZone" onclick="document.getElementById('fileInput').click()">
@@ -603,6 +843,17 @@
     <p>Ou clique para selecionar</p>
     <input type="file" id="fileInput" accept=".md">
 </div>
+
+<!-- ===== Table of Contents (TOC) ===== -->
+<button id="toc-toggle" onclick="toggleTOC()" title="Ver Índice">☰</button>
+
+<nav id="toc-container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3 style="margin: 0;">Índice</h3>
+        <button onclick="toggleTOC()" style="background:none; border:none; cursor:pointer; font-size:18px; opacity:0.5;">✕</button>
+    </div>
+    <div id="toc-content"></div>
+</nav>
 
 <!-- ===== CONTEÚDO ===== -->
 <div id="content"></div>
@@ -617,12 +868,20 @@
     const dropZone   = document.getElementById('dropZone');
     const fileInput  = document.getElementById('fileInput');
     const contentDiv = document.getElementById('content');
-    const toolbar    = document.getElementById('toolbar');
+
+    // const toolbar    = document.getElementById('toolbar');
+	const sideMenu   = document.getElementById('side-menu');
+
     const badgeEdit  = document.getElementById('badge-edit');
     const btnToggle  = document.getElementById('btn-toggle-edit');
     const btnDl      = document.getElementById('btn-download');
-    const flashEl    = document.getElementById('save-flash');
-    const filenameEl = document.getElementById('toolbar-filename');
+
+    // const flashEl    = document.getElementById('save-flash');
+    const toastEl = document.getElementById('toast-notification');
+    let toastTimeout; // Variável para controlar o tempo da notificação
+
+    // const filenameEl = document.getElementById('toolbar-filename');
+	const filenameEl = document.getElementById('side-menu-filename');
 
     /* ================================================================
        DROP ZONE
@@ -651,10 +910,13 @@
 
     function showContentArea(displayName) {
         contentDiv.classList.add('show');
-        toolbar.classList.add('visible');
+        // toolbar.classList.add('visible');
+        sideMenu.classList.add('visible'); // <--- Linha alterada aqui, de toolbar para sideMenu
         filenameEl.textContent = displayName;
         document.title = displayName + ' — VC Reader';
     }
+
+
 
     /* ================================================================
        MODO DE EDIÇÃO
@@ -703,7 +965,7 @@
 <title>${title}</title>
 <style>
 ${inlineCss}
-#toolbar, #dropZone, #save-flash, #badge-edit { display: none !important; }
+#side-menu, #dropZone, #toast-notification, #badge-edit { display: none !important; }
 #content {
   display: block !important;
   border-left: none !important;
@@ -731,13 +993,21 @@ ${bodyContent}
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        showFlash();
+        // showFlash();
+        showToast('✓ Arquivo HTML salvo com sucesso');
     }
 
-    function showFlash() {
-        flashEl.classList.add('show');
-        setTimeout(() => flashEl.classList.remove('show'), 2000);
-    }
+    // Apagada a antiga function showFlash() {...} e colocada esta no lugar (v 0.5.5):
+	function showToast(message) {
+	    toastEl.textContent = message;
+	    toastEl.classList.add('show');
+	    
+	    // Reseta o cronômetro caso o usuário clique várias vezes seguidas
+	    clearTimeout(toastTimeout);
+	    toastTimeout = setTimeout(() => {
+	        toastEl.classList.remove('show');
+	    }, 3000); // Some após 3 segundos
+	}
 
     btnDl.addEventListener('click', triggerDownload);
 
@@ -747,6 +1017,113 @@ ${bodyContent}
             if (contentDiv.classList.contains('show')) triggerDownload();
         }
     });
+
+
+    /* ================================================================
+       Table of Contents (TOC)
+       ================================================================ */
+
+	function toggleTOC() {
+	    const toc = document.getElementById('toc-container');
+	    const btn = document.getElementById('toc-toggle');
+	    
+	    const isCollapsed = toc.classList.toggle('collapsed');
+	    
+	    // Mostra o botão flutuante ☰ apenas quando o menu lateral está escondido
+	    btn.style.display = isCollapsed ? 'flex' : 'none';
+	}
+	// Inicialização: Começa aberto ou fechado?
+	// Se quiser que comece fechado, descomente a linha abaixo:
+	// window.addEventListener('DOMContentLoaded', toggleTOC);
+
+	function generateTOC() {
+	    const container = document.getElementById('content-area');
+	    const tocContent = document.getElementById('toc-content');
+	    const headings = contentDiv.querySelectorAll('h1, h2, h3, h4');
+	    
+	    tocContent.innerHTML = ''; // Limpa antes de gerar
+
+	    headings.forEach((heading, index) => {
+	        // Cria um ID único para cada título se não existir
+	        const id = `heading-${index}`;
+	        heading.setAttribute('id', id);
+
+	        // Cria o link no TOC
+	        const link = document.createElement('a');
+	        link.href = `#${id}`;
+	        link.textContent = heading.textContent;
+	        link.className = `toc-item toc-${heading.tagName.toLowerCase()}`;
+	        
+	        // Efeito de scroll suave ao clicar
+	        link.onclick = (e) => {
+	            e.preventDefault();
+	            heading.scrollIntoView({ behavior: 'smooth' });
+	        };
+
+	        tocContent.appendChild(link);
+	    });
+	}
+
+
+    /* ============================================================
+       Barra superior aos códigos, estilo Gemini, ChatGPT, etc
+       ============================================================ */	
+	function addCodeHeaders() {
+	    const codeBlocks = document.querySelectorAll('pre code');
+
+        // Ícones SVG minimalistas
+        const svgCopy = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+        const svgCheck = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+
+	    codeBlocks.forEach((codeEl) => {
+	        const preEl = codeEl.parentElement;
+	        if (preEl.parentElement.classList.contains('code-block-wrapper')) return;
+
+	        /* const langClass = Array.from(codeEl.classList).find(c => c.startsWith('language-')) || '';
+	        const langName = langClass.replace('language-', '') || 'code'; */
+            // NOVO: Lê a string completa salva pelo markdown-it (ex: "python sfia")
+            let langName = preEl.getAttribute('data-info');
+            // Caso não tenha atributo, faz o fallback para o comportamento antigo
+            if (!langName) {
+                const langClass = Array.from(codeEl.classList).find(c => c.startsWith('language-')) || '';
+                langName = langClass.replace('language-', '') || 'code';
+            }
+
+	        const wrapper = document.createElement('div');
+	        wrapper.className = 'code-block-wrapper';
+
+	        const header = document.createElement('div');
+	        header.className = 'code-block-header';
+            // Usa data-hint para renderizar o balão flutuante pelo CSS
+	        header.innerHTML = `
+	            <span>${langName}</span>
+	            <button class="copy-btn" data-hint="Copiar código">${svgCopy}</button>
+	        `;
+
+	        const copyBtn = header.querySelector('.copy-btn');
+	        copyBtn.onclick = () => {
+	            const text = codeEl.innerText;
+	            navigator.clipboard.writeText(text).then(() => {
+                    // Troca para o ícone de Check e atualiza o Tooltip
+                    copyBtn.innerHTML = svgCheck;
+                    copyBtn.setAttribute('data-hint', 'Copiado!');
+                    
+                    // Se você já implementou a notificação Toast no rodapé da versão anterior, 
+                    // pode ativá-la aqui com: if(typeof showToast === 'function') showToast('📋 Copiado');
+
+	                setTimeout(() => {
+                        copyBtn.innerHTML = svgCopy;
+                        copyBtn.setAttribute('data-hint', 'Copiar código');
+                    }, 2000);
+	            });
+	        };
+
+	        preEl.parentNode.insertBefore(wrapper, preEl);
+	        wrapper.appendChild(header);
+	        wrapper.appendChild(preEl);
+	    });
+	}
+
 
     /* ================================================================
        RENDERIZAÇÃO DE MARKDOWN
@@ -766,38 +1143,88 @@ ${bodyContent}
         });
     }
 
-    function renderContent(text) {
-        let md = window.markdownit({ html: true, linkify: true, typographer: true });
-        if (window.markdownitEmoji)     md = md.use(window.markdownitEmoji);
-        if (window.markdownitFootnote)  md = md.use(window.markdownitFootnote);
-        if (window.markdownitTaskLists) md = md.use(window.markdownitTaskLists, { enabled: true });
-        if (window.markdownitMark)      md = md.use(window.markdownitMark);
+	function renderContent(text) {
+	    // console.log('DebugPaa');
 
-        text = processarCallouts(text);
+	    // 1. Setup do Markdown-it e Plugins
+	    let md = window.markdownit({ html: true, linkify: true, typographer: true });
+	    if (window.markdownitEmoji)      md = md.use(window.markdownitEmoji);
+	    if (window.markdownitFootnote)   md = md.use(window.markdownitFootnote);
+	    if (window.markdownitTaskLists)  md = md.use(window.markdownitTaskLists, { enabled: true });
+	    if (window.markdownitMark)       md = md.use(window.markdownitMark);
 
-        if (text.startsWith('---')) {
-            const parts = text.split('---');
-            if (parts.length >= 3) {
-                try {
-                    const doc = jsyaml.load(parts[1]);
-                    let metaHtml = "<div class='metadata-box'><h3>Frontmatter</h3><table>";
-                    for (const [k, v] of Object.entries(doc)) {
-                        const val = typeof v === 'object' ? JSON.stringify(v) : v;
-                        metaHtml += `<tr><th>${k}</th><td>${val}</td></tr>`;
-                    }
-                    metaHtml += "</table></div>";
-                    contentDiv.innerHTML = metaHtml + md.render(parts.slice(2).join('---'));
-                } catch {
-                    contentDiv.innerHTML = md.render(text);
-                }
-                renderMermaid();
-                return;
+	    // ADICIONE ESTE BLOCO AQUI:
+	    // Intercepta a renderização de blocos de código para não perder a segunda palavra
+	    /* const defaultFenceRender = md.renderer.rules.fence || function(tokens, idx, options, env, self) {
+	        return self.renderToken(tokens, idx, options);
+	    };
+	    md.renderer.rules.fence = function (tokens, idx, options, env, self) {
+	        const token = tokens[idx];
+	        if (token.info) {
+	            // Salva a string completa (ex: "python sfia") em um atributo "data-info" no HTML
+	            token.attrSet('data-info', token.info.trim());
+	        }
+	        return defaultFenceRender(tokens, idx, options, env, self);
+	    }; #ESTE TRECHO NÃO FUNCIONOU, APAGAR QUANDO QUISER, COLOQUEI O DE BAIXO */
+        const defaultFenceRender = md.renderer.rules.fence;
+        
+	    md.renderer.rules.fence = function (tokens, idx, options, env, self) {
+	        const token = tokens[idx];
+            // Pega o texto completo (ex: "python sfia")
+            const info = token.info ? token.info.trim() : ''; 
+            
+            // 1. Deixa o markdown-it gerar o HTML padrão dele (<pre><code class="...">)
+	        let html = defaultFenceRender(tokens, idx, options, env, self);
+
+            // 2. Se existir uma linguagem/info, injetamos nosso atributo direto na tag
+            if (info) {
+                html = html.replace('<pre>', `<pre data-info="${info}">`);
             }
-        }
+            
+	        return html;
+	    };
 
-        contentDiv.innerHTML = md.render(text);
-        renderMermaid();
-    }
+
+
+	    // 2. Processamento Inicial
+	    let contentToRender = processarCallouts(text);
+	    let metaHtml = "";
+
+	    // 3. Extração e Parse do Frontmatter (YAML)
+	    if (contentToRender.startsWith('---')) {
+	        const parts = contentToRender.split('---');
+	        
+	        if (parts.length >= 3) {
+	            try {
+	                const doc = jsyaml.load(parts[1]);
+	                metaHtml = "<div class='metadata-box'><h3>YAML Frontmatter</h3><table>";
+	                
+	                for (const [k, v] of Object.entries(doc)) {
+	                    const val = typeof v === 'object' ? JSON.stringify(v) : v;
+                        metaHtml += `<tr><th>${k}</th><td>${val}</td></tr>`;
+	                }
+	                metaHtml += "</table></div>";
+
+	                // Atualiza o conteúdo para renderizar apenas o que vem após o frontmatter
+	                contentToRender = parts.slice(2).join('---');
+	            } catch (error) {
+	                // Em caso de erro no parse do YAML, loga o erro e segue renderizando o texto completo
+	                console.error("Erro ao processar o YAML Frontmatter:", error);
+	            }
+	        }
+	    }
+
+	    // 4. Atualização Única do DOM
+	    contentDiv.innerHTML = metaHtml + md.render(contentToRender);
+
+	    // 5. Pós-renderização (Executado apenas uma vez, no final)
+	    renderMermaid();
+	    // console.log('DebugPbb');
+	    generateTOC();      // <--- Table of Contents (TOC)
+	    // console.log('DebugPcc');
+	    addCodeHeaders();   // <--- Barra superior aos códigos, estilo Gemini, ChatGPT, etc
+	}
+
 
     function renderMermaid() {
         if (window.mermaid) {
@@ -807,6 +1234,7 @@ ${bodyContent}
             }, 100);
         }
     }
+
 
     /* ================================================================
        BOOT — modo servido (?file=) ou ad-hoc (dropzone)
