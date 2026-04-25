@@ -3,8 +3,24 @@
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 
-## [0.4.9] - 2026-04
+## [0.5.0] - 2026-04
 - versão em desenvolvimento
+
+## [0.4.9] - 2026-04
+Esta versão representa um salto significativo na consolidação arquitetural do projeto como um Ecossistema, transformando o antigo `sfiaweb` num `core` unificado e trazendo o poder da interface de linha de comando nativamente para a Web.
+
+### Arquitetura "VC Core" e Bibliotecas
+- **Nascimento do `core/`:** A antiga pasta `sfiaweb` evoluiu para `core/`, atuando como cérebro do monorepo. Hospeda o servidor web, o novo orquestrador CLI e bibliotecas compartilhadas.
+- **Biblioteca Central (`core/lib/vccore.py`):** Criada para evitar repetição de código. Centraliza caminhos vitais (`ROOT_DIR`, `VAR_DIR`, `USR_DIR`), formatação de logs ANSI, leitura dinâmica da versão a partir do `pyproject.toml` raiz e validação de segurança do ambiente.
+- **Novo Orquestrador (`core/main.py`):** Absorveu as funções de `vc_manager.py` e do antigo `sc.py`. Exibe o painel de status no arranque, faz validações críticas (como execução fora do drive C:, com pausa interativa) e verifica a existência das ferramentas portáteis em `usr/`.
+- **Sistema de Scripts Injetáveis (`core/Scripts/`):** Os antigos atalhos de `doskey` foram convertidos em ficheiros `.bat` independentes (`vc.bat`, `vcdir.bat`, `vcclean.bat`, `wm.bat`, `vcw.bat`, etc.). Eles são injetados diretamente no `%PATH%` do sistema no arranque, tornando-se comandos globais transparentes.
+
+### Launchpad Web e Ferramentas Nativas
+- **Launchpad (Hub):** A interface web (`index.html`) foi reformulada num painel de "Cards" limpo. Cada ferramenta abre na sua própria aba, preservando o fluxo analítico.
+- **Terminal Web (WebSockets):** A linha de comandos foi levada ao navegador via `xterm.js` e WebSockets (`/ws/terminal`). Baseado em `asyncio`, recria o *local-echo*, suporta macros nativas (`vc`, `vcdir`, `clear`) e contorna o bloqueio natural de Pipes do Windows com forçamento estrito de UTF-8 (`chcp 65001`).
+- **Editor Monaco Integrado (`md-editor-pm.html`):** O motor do VS Code agora roda diretamente no Hub. Trabalha nativamente com a nova pasta `_tmpl/`, suportando o atalho `Ctrl+S` que salva o código, dispara a compilação do `template_engine` em segundo plano e devolve uma notificação visual (*Toast*).
+- **Hot Reload Silencioso (Polling):** Fim do `Shift+F5`. Adicionada a rota `/api/mtime` no `server.py` que vigia as datas de modificação dos ficheiros gerados (`_mds/`). O visualizador capta a mudança e recarrega instantaneamente via *Cache Busting*.
+- **Estrutura de Ficheiros Estáticos (`/static`):** Criação de gestão estática para logotipos do projeto, eliminando erros de servidor e servindo dinamicamente o `favicon.ico`.
 
 ## [0.4.8] - 2026-04
 Esta versão consolida a visão do sistema sfia como uma linguagem documental viva. O foco foi a implementação do **SFIA_TMPL_SPEC v0.3**, um motor de templates lineares (Parser Lexical) com namespace Python compartilhado, aproximando a experiência de auditoria do conceito de *Jupyter Notebooks Textuais*, mas com extrema segurança anti-recursividade.

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VC - Hub de Auditoria v0.4.9</title>
+    <style>
+        :root {
+            --bg: #f8f9fa;
+            --surface: #ffffff;
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --text: #333;
+            --text-muted: #7f8c8d;
+            --border: #dee2e6;
+            --radius: 12px;
+            --shadow: 0 4px 6px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 40px; line-height: 1.6; }
+
+        header { margin-bottom: 40px; display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid var(--border); padding-bottom: 20px; }
+        h1 { font-size: 2.2rem; color: var(--primary); font-weight: 700; }
+        .workdir-info { font-size: 0.9rem; color: var(--text-muted); background: #eee; padding: 5px 12px; border-radius: 20px; margin-top: 10px; display: inline-block; }
+
+        /* GRID DE FERRAMENTAS */
+        .tool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 60px; }
+        
+        .card { 
+            background: var(--surface); 
+            padding: 30px; 
+            border-radius: var(--radius); 
+            box-shadow: var(--shadow); 
+            text-decoration: none; 
+            color: inherit; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .card:hover { transform: translateY(-8px); box-shadow: 0 12px 20px rgba(0,0,0,0.1); border-color: var(--accent); }
+        .card .icon { font-size: 2.5rem; margin-bottom: 10px; }
+        .card h3 { color: var(--primary); font-size: 1.3rem; }
+        .card p { color: var(--text-muted); font-size: 0.95rem; }
+
+        /* LISTA DE DOCUMENTOS */
+        .recent-section { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+        .file-list-container { background: var(--surface); padding: 25px; border-radius: var(--radius); box-shadow: var(--shadow); }
+        .file-list-container h2 { font-size: 1.2rem; margin-bottom: 20px; color: var(--primary); border-left: 4px solid var(--accent); padding-left: 15px; }
+        
+        ul { list-style: none; }
+        li { padding: 10px 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+        li:last-child { border: none; }
+        .file-link { text-decoration: none; color: var(--accent); font-weight: 500; font-size: 0.95rem; transition: opacity 0.2s; }
+        .file-link:hover { opacity: 0.7; }
+        .file-tag { font-size: 0.75rem; color: #999; background: #f8f9fa; padding: 2px 8px; border-radius: 4px; }
+
+        .btn-shutdown { margin-top: 60px; background: none; border: 1px solid #ff4d4d; color: #ff4d4d; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .btn-shutdown:hover { background: #ff4d4d; color: white; }
+
+        @media (max-width: 768px) { .recent-section { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <header>
+	    <div style="display: flex; align-items: center; gap: 15px;">
+	        <img src="/static/pn_i64.png" alt="Logo VC" style="width: 48px; height: 48px;">
+	        <div>
+	            <h1>VC - Launchpad</h1>
+	            <div id="workdir-display" class="workdir-info">Carregando workspace...</div>
+	        </div>
+	    </div>
+    </header>
+
+
+
+    <div class="tool-grid">
+        <a href="/terminal" target="_blank" class="card">
+            <div class="icon">🖥️</div>
+            <h3>Terminal Web</h3>
+            <p>Execute comandos <code>vc</code>, <code>uv run</code> e scripts de auditoria em tempo real.</p>
+        </a>
+
+        <a href="/editor" target="_blank" class="card">
+            <div class="icon">📝</div>
+            <h3>Editor de Templates</h3>
+            <p>Edite arquivos <code>.tmpl.md</code> em <code>_tmpl/</code> com o motor Monaco.</p>
+        </a>
+
+        <a href="/sql-query" target="_blank" class="card">
+            <div class="icon">🔍</div>
+            <h3>Query SQL Rápida</h3>
+            <p>Exploração ad-hoc dos bancos SQLite com visualização tabular imediata.</p>
+        </a>
+
+        <a href="/explorer" target="_blank" class="card">
+            <div class="icon">📁</div>
+            <h3>Explorador de Arquivos</h3>
+            <p>Navegue pelos relatórios materializados e arquivos Excel de suporte.</p>
+        </a>
+    </div>
+
+    <div class="recent-section">
+        <div class="file-list-container">
+            <h2>Templates Recentes (_tmpl)</h2>
+            <ul id="list-templates">
+                <li style="color:#999">Buscando templates...</li>
+            </ul>
+        </div>
+
+        <div class="file-list-container">
+            <h2>Relatórios Materializados (_mds)</h2>
+            <ul id="list-reports">
+                <li style="color:#999">Buscando relatórios...</li>
+            </ul>
+        </div>
+    </div>
+
+    <button class="btn-shutdown" onclick="desligarServidor()">Desligar Servidor</button>
+
+    <script>
+        // Função para carregar os dados do workspace v0.4.9
+        async function initHub() {
+            try {
+                const res = await fetch('/api/files/list');
+                const data = await res.json();
+
+                // Atualiza o caminho do WorkDir
+                document.getElementById('workdir-display').textContent = `📂 ${data.work_dir}`;
+
+                // Popula Templates
+                const tmplList = document.getElementById('list-templates');
+                if (data.templates.length > 0) {
+                    tmplList.innerHTML = data.templates.map(file => `
+                        <li>
+                            <a href="/editor?file=${file}" target="_blank" class="file-link">${file}</a>
+                            <span class="file-tag">TMPL</span>
+                        </li>
+                    `).join('');
+                } else {
+                    tmplList.innerHTML = '<li style="color:#ccc">Nenhum template encontrado em _tmpl/</li>';
+                }
+
+                // Popula Relatórios
+                const reportList = document.getElementById('list-reports');
+                if (data.reports.length > 0) {
+                    reportList.innerHTML = data.reports.map(file => `
+                        <li>
+                            <a href="/md_viewer?file=${file}" target="_blank" class="file-link">${file}</a>
+                            <span class="file-tag">MD</span>
+                        </li>
+                    `).join('');
+                } else {
+                    reportList.innerHTML = '<li style="color:#ccc">Nenhum relatório gerado em _mds/</li>';
+                }
+
+            } catch (err) {
+                console.error("Erro ao carregar hub:", err);
+                document.getElementById('workdir-display').textContent = "❌ Erro ao conectar com o servidor.";
+            }
+        }
+
+        function desligarServidor() {
+            if(confirm("Deseja realmente desligar o servidor VC?")) {
+                fetch('/api/shutdown', {method:'POST'})
+                    .then(() => {
+                        document.body.innerHTML = '<div style="text-align:center; padding-top:100px;"><h1>💤 Servidor desligado.</h1><p>Pode fechar esta aba.</p></div>';
+                    });
+            }
+        }
+
+        // Inicializa ao carregar
+        window.onload = initHub;
+    </script>
+</body>
+</html>

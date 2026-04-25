@@ -1,5 +1,5 @@
 # 📝 Especificação Conceitual: Templates Dinâmicos
-**Versão:** 0.3 | **Status:** Alpha | **Ecossistema:** VC / sfia | **Formato Nome:** `*.tmpl.md`
+**Versão:** 0.4 | **Status:** Alpha | **Ecossistema:** VC / sfia | **Formato Nome:** `*.tmpl.md`
 
 ## 1. Visão Geral (O que é)
 Um `*.tmpl.md` é um **documento-fonte de auditoria**, composto por texto livre em Markdown, frontmatter obrigatório de contexto, variáveis interpoláveis, blocos SQL executáveis e blocos Python executáveis.

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VC - Terminal</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background-color: #1e1e1e; /* Fundo escuro clássico */
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        #terminal-container {
+            width: 100%;
+            height: calc(100% - 30px);
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        #status-bar {
+            height: 30px;
+            background: #007acc;
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            font-size: 0.85rem;
+        }
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #f1c40f; /* Amarelo: Ligando */
+            margin-right: 10px;
+            transition: background-color 0.3s;
+        }
+        .status-indicator.connected { background-color: #2ecc71; } /* Verde: Conectado */
+        .status-indicator.disconnected { background-color: #e74c3c; } /* Vermelho: Desconectado */
+    </style>
+</head>
+<body>
+
+    <div id="terminal-container"></div>
+    <div id="status-bar">
+        <div id="status-dot" class="status-indicator"></div>
+        <span id="status-text">Conectando ao WorkDir...</span>
+    </div>
+
+    <script>
+// Inicializa o Xterm.js
+const term = new Terminal({
+    cursorBlink: true,
+    theme: { background: '#1e1e1e' },
+    fontFamily: 'Consolas, "Courier New", monospace'
+});
+
+const fitAddon = new FitAddon.FitAddon();
+term.loadAddon(fitAddon);
+term.open(document.getElementById('terminal-container'));
+fitAddon.fit();
+
+window.addEventListener('resize', () => fitAddon.fit());
+
+const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+const wsUrl = `${protocol}//${window.location.host}/ws/terminal`;
+let ws;
+let currentCommand = '';
+
+function connect() {
+    ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+        document.getElementById('status-dot').className = 'status-indicator connected';
+        document.getElementById('status-text').textContent = 'Conectado - Shell VC Ativo';
+        term.focus();
+    };
+
+    ws.onmessage = (event) => {
+        term.write(event.data);
+    };
+
+    ws.onclose = () => {
+        document.getElementById('status-dot').className = 'status-indicator disconnected';
+        document.getElementById('status-text').textContent = 'Desconectado. Pressione F5 para reconectar.';
+        term.write('\r\n\x1b[31m[Conexão encerrada pelo servidor]\x1b[0m\r\n');
+    };
+
+    // Gerencia a digitação do usuário (Local Echo)
+    term.onData((data) => {
+        if (ws.readyState !== WebSocket.OPEN) return;
+
+        if (data === '\r') { // Tecla Enter
+            ws.send(currentCommand);
+            currentCommand = '';
+            term.write('\r\n'); 
+        } else if (data === '\u007F') { // Tecla Backspace
+            if (currentCommand.length > 0) {
+                currentCommand = currentCommand.slice(0, -1);
+                term.write('\b \b'); // Apaga o caractere da tela
+            }
+        } else if (data.length === 1 && data.charCodeAt(0) >= 32) { 
+            // Caracteres normais imprimíveis
+            currentCommand += data;
+            term.write(data);
+        }
+    });
+}
+
+connect();
+    </script>
+</body>
+</html>

@@ -33,11 +33,12 @@ O isolamento de microapps é usado basicamente para economizar tokens em IA, foc
 
 ## 🛠️ Microapps Disponíveis
 
-### 1. [sfiaweb] - Servidor de Relatórios (Dashboard Tático)
-Servidor leve FastAPI que atua como **Estação de Trabalho do Auditor**. 
-* Lida com o *work_dir* atual, serve o visualizador local de Markdown (`markdown-it.html`).
-* Oferece consultas SQL ad-hoc ao vivo (`/api/query`) com renderização tabular imediata e suporte a exportações diretas.
-* Suporta edição nativa ao vivo dos relatórios HTML com atalho de salvamento local (`Ctrl+S`).
+### 1. [core] - Central de Comando e Launchpad Web
+Atua como o cérebro do projeto (evolução do antigo `sfiaweb`).
+* Fornece um Launchpad com servidor web leve FastAPI.
+* **Terminal Web:** Acesso integrado via WebSockets ao terminal Windows diretamente no browser.
+* **Editor Monaco:** Edição nativa dos templates em `_tmpl/` com auto-compilação e Hot Reload ao salvar (`Ctrl+S`).
+* Abriga as bibliotecas globais (`core/lib/vccore.py`) e os scripts de inicialização de sistema (`core/Scripts/`).
 
 ### 2. [sfia_safic] - Tratamento SAFIC e Relatórios 
 Motor de construção da base consolidada (SIA) a partir da extração OSF. 
@@ -64,10 +65,8 @@ Permite extrair resultados de consultas SQL complexas para múltiplos formatos (
 ---
 
 ## Terminal de Trabalho (`terminal.bat`)
-O arquivo `terminal.bat` na raiz configura o ambiente UTF-8 e define atalhos (**doskeys**) para facilitar o uso, como:
-* `vc`: Atalho para rodar qualquer microapp (`uv run --directory ...`).
-* `vcdump`: Gera o consolidado de código do projeto para contexto de IA.
-* `sqlite2md`: Atalho rápido para o utilitário de inspeção de banco de dados.
+O arquivo `terminal.bat` na raiz atua como o "interruptor" do ambiente. Ele injeta a configuração de UTF-8, cria a variável de contexto `%VC_ROOT%`, injeta os comandos nativos da pasta `core/Scripts/` no seu `%PATH%` (ex: comandos `vc`, `vcdir`, `vcclean`, `wm`, `vcw`) e por fim, inicializa o painel principal (`core/main.py --welcome`).
+> Em outras palavras, **a única forma de iniciar o VC é através de `terminal.bat`**
 
 ## 🚀 Como Iniciar
 

@@ -30,7 +30,7 @@ class SfiaHelper:
         try:
             with sqlite3.connect(hist_db) as conn:
                 cur = conn.cursor()
-                cur.execute(f"SELECT sql_query FROM history WHERE title = ? ORDER BY timestamp DESC LIMIT 1", (title,))
+                cur.execute(f"SELECT sql_query FROM history WHERE title LIKE ? ORDER BY timestamp DESC LIMIT 1", (f"%{title}%",))
                 row = cur.fetchone()
                 # print(f"[DEBUG]  get_history_query.row={row}")  # debug
                 if row:

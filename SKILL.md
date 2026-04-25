@@ -1,6 +1,6 @@
 ---
 name: vc
-version: "0.4.8"
+version: "0.4.9"
 type: monorepo
 stack: python, sqlite, uv, markdown, html
 os: windows, linux
@@ -32,7 +32,7 @@ Para detalhes completos, leia o [README.md](README.md).
 
 | Pasta | Função | SO |
 |---|---|---|
-| `sfiaweb/` | Estação de Trabalho (FastAPI local, Consultas SQL e Visualizador MD) | Linux/Win |
+| `core/` | Central de Comando (FastAPI, Launchpad, Terminal Web, Editor Monaco e Scripts base) | Linux/Win |
 | `sfia_safic/` | Workspace setup, Build SIA, Relatórios e Compilador de Templates | Linux/Win |
 | `sfia_credAcCust/` | Relatórios e-CredAc Custeio (PowerBI → SQLite) | Linux/Win |
 | `importador_safic/` | ETL: MDF/SQL Server → SQLite OSF (com merge dinâmico) | **MDF Win Only** |
@@ -44,6 +44,7 @@ Para detalhes completos, leia o [README.md](README.md).
 ## Regras de ouro (para a IA)
 
 **Fazer:**
+- **a única forma de iniciar o VC é através de `terminal.bat`**
 - Usar `uv run` sempre, nunca `python` direto
 - Cada microapp é editado de forma isolada
 - O contexto atual do sistema é sempre guiado pelo arquivo `var/sfia_config.toml` (o CLI lida com isso sozinho).
@@ -51,6 +52,8 @@ Para detalhes completos, leia o [README.md](README.md).
 - Templates: O motor de templates (template_engine.py) usa a arquitetura Lexical/Linear (Passada única de cima para baixo). O estado das variáveis se mantém no documento. A definição conceitual completa dos templates está na pasta raiz, em [SFIA_TMPL_SPEC.md](SFIA_TMPL_SPEC.md).
 - Manter o isolamento: alterações num microapp não devem afetar o `pyproject.toml` de outro.
 - Imports entre módulos do mesmo microapp usam caminhos relativos simples
+- **Estrutura de Templates e Temporários**: Os arquivos fontes dos templates devem ficar na pasta `_tmpl/`. Arquivos temporários ad-hoc do sistema devem ir para `var/temp/`.
+- **Arquitetura Core**: Funções e utilitários que não dependam de bibliotecas externas pesadas e que servem a múltiplos microapps devem ser adicionadas em `core/lib/vccore.py`. Scripts `.bat` utilitários globais devem ir para `core/Scripts/`.
 
 **Não fazer:**
 - Não criar `config.toml` na raiz (foi removido intencionalmente)

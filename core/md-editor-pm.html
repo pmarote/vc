@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>VC - Editor Monaco</title>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e1e1e; color: #d4d4d4; }
+        
+        /* Barra de Ferramentas */
+        #toolbar { height: 40px; background: #252526; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; border-bottom: 1px solid #3c3c3c; box-sizing: border-box; }
+        #file-info { font-size: 0.9rem; font-weight: 600; color: #9cdcfe; }
+        .badge { background: #007acc; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-right: 8px; }
+        
+        #actions { display: flex; gap: 10px; }
+        button { background: #0e639c; color: white; border: none; padding: 5px 15px; border-radius: 3px; cursor: pointer; font-size: 0.85rem; font-weight: bold; transition: background 0.2s; }
+        button:hover { background: #1177bb; }
+        button:disabled { background: #4d4d4d; color: #888; cursor: not-allowed; }
+        
+        /* Container do Editor */
+        #editor-container { width: 100%; height: calc(100% - 40px); }
+        
+        /* Toast de Notificação */
+        #toast { position: fixed; bottom: 20px; right: 20px; background: #2ecc71; color: white; padding: 10px 20px; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 1000; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+    <div id="toolbar">
+        <div id="file-info"><span class="badge">TMPL</span> <span id="filename-display">Carregando...</span></div>
+        <div id="actions">
+            <span id="status-text" style="font-size: 0.8rem; color: #888; margin-right: 10px; align-self: center;"></span>
+            <button id="btn-save" onclick="salvarECompilar()">Salvar & Compilar (Ctrl+S)</button>
+        </div>
+    </div>
+
+    <div id="editor-container"></div>
+    <div id="toast">✅ Salvo e Compilado com sucesso!</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const filename = urlParams.get('file');
+        let editor;
+
+        if (!filename) {
+            document.getElementById('filename-display').textContent = "Erro: Nenhum arquivo especificado na URL.";
+            document.getElementById('btn-save').disabled = true;
+        } else {
+            document.getElementById('filename-display').textContent = filename;
+            
+            // Configura o Monaco
+            require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.38.0/min/vs' }});
+            require(['vs/editor/editor.main'], function() {
+                
+                editor = monaco.editor.create(document.getElementById('editor-container'), {
+                    value: '// Carregando conteúdo...',
+                    language: 'markdown',
+                    theme: 'vs-dark',
+                    automaticLayout: true,
+                    wordWrap: 'on',
+                    minimap: { enabled: false },
+                    fontSize: 14
+                });
+
+                // Atalho Ctrl+S Nativo do Editor
+                editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, function() {
+                    salvarECompilar();
+                });
+
+                // Carrega o arquivo do servidor
+                carregarArquivo();
+            });
+        }
+
+        async function carregarArquivo() {
+            try {
+                const res = await fetch(`/api/file/read?file=${encodeURIComponent(filename)}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    editor.setValue(data.content);
+                } else {
+                    editor.setValue(``);
+                }
+            } catch (e) {
+                console.error("Erro ao ler arquivo:", e);
+            }
+        }
+
+        async function salvarECompilar() {
+            if (!editor || !filename) return;
+            const btn = document.getElementById('btn-save');
+            const status = document.getElementById('status-text');
+            
+            btn.disabled = true;
+            status.textContent = "Salvando...";
+
+            try {
+                // 1. Salvar o arquivo
+                const content = editor.getValue();
+                await fetch('/api/file/write', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename, content })
+                });
+
+                // 2. Compilar
+                status.textContent = "Compilando Template...";
+                const res = await fetch('/api/compile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename })
+                });
+                
+                const compileData = await res.json();
+                
+                if (compileData.status === "ok") {
+                    mostrarToast("✅ Salvo e Compilado com sucesso!");
+                } else {
+                    alert("Erro na compilação:\n" + compileData.output);
+                }
+
+            } catch (e) {
+                alert("Erro de comunicação com o servidor.");
+            } finally {
+                btn.disabled = false;
+                status.textContent = "";
+            }
+        }
+
+        function mostrarToast(mensagem) {
+            const toast = document.getElementById('toast');
+            toast.textContent = mensagem;
+            toast.style.opacity = 1;
+            setTimeout(() => { toast.style.opacity = 0; }, 3000);
+        }
+    </script>
+</body>
+</html>
