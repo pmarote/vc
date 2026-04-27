@@ -1,12 +1,12 @@
 """
 Funções auxiliares compartilhadas entre os módulos de reports.
+Refatorado para utilizar as bibliotecas centrais do VC.
 """
-import sys
 from pathlib import Path
 
-# Garante que to_markdown seja encontrado (está um nível acima)
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from to_markdown import export_markdown
+# IMPORTANTE: Importando as bibliotecas centrais (Namespaces isolados)
+import core.lib.vccore as vc
+import core.lib.to_markdown as vctm
 
 # --- VARIÁVEL DE ESTADO GLOBAL DO MÓDULO ---
 _DEBUG_ATIVO = False
@@ -20,7 +20,8 @@ def executar_e_formatar(query, cursor, out_path, title):
     """Executa a query e faz o append do resultado formatado no arquivo MD."""
     try:
         cursor.execute(query)
-        export_markdown(
+        # Chama a exportação apontando para o namespace da biblioteca (vctm)
+        vctm.export_markdown(
             cursor=cursor,
             out_path=out_path,
             sql_query=query,
@@ -29,10 +30,12 @@ def executar_e_formatar(query, cursor, out_path, title):
             show_meta=_DEBUG_ATIVO  # <--- Lê a variável global do módulo
         )
     except Exception as e:
+        # Avisa no console padronizado e registra no corpo do relatório
+        vc.log(f"Erro na consulta SQL ({title}): {e}", level="ERROR")
         with open(out_path, "a", encoding="utf-8") as f:
             f.write(f"## {title}\n\n**Erro na consulta:** `{e}`\n\n")
 
-def iniciar_relatorio(out_path, titulo, debug=False): # <--- Recebe o debug aqui
+def iniciar_relatorio(out_path, titulo, debug=False):
     """Cria o arquivo do relatório com o título e o link para o menu."""
     set_debug(debug) # Atualiza o estado automaticamente ao iniciar o relatório
     

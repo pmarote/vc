@@ -1,12 +1,17 @@
 import sqlite3
 import pandas as pd
 import os
+import sys
 from pathlib import Path
+
+# IMPORTANTE: Importando a biblioteca central do VC
+import core.lib.vccore as vc
 
 def construir_banco_sia(db_osf, db_sia, excel_file):
     # 1. Validação Defensiva (Garante que o Excel está na pasta certa)
     if not os.path.exists(excel_file):
-        raise FileNotFoundError(f"❌ ERRO: Planilha de parâmetros não encontrada em: {excel_file}")
+        vc.log(f"Planilha de parâmetros não encontrada em: {excel_file}", level="ERROR")
+        sys.exit(1)
 
     if os.path.exists(db_sia):
         os.remove(db_sia)
@@ -26,7 +31,7 @@ def construir_banco_sia(db_osf, db_sia, excel_file):
     # Anexa o banco OSF usando o caminho seguro
     cursor.execute(f"ATTACH DATABASE '{safe_db_osf}' AS osf;")
 
-    print(f" ➔ Importando abas do Excel ({Path(excel_file).name})...")
+    vc.log(f"Importando abas do Excel ({Path(excel_file).name})...", level="INFO")
     df_cfopd = pd.read_excel(excel_file, sheet_name="cfopd")
     df_regorig = pd.read_excel(excel_file, sheet_name="regOrig")
     df_cfopentsai = pd.read_excel(excel_file, sheet_name="cfopEntSai")
@@ -35,7 +40,7 @@ def construir_banco_sia(db_osf, db_sia, excel_file):
     df_regorig.to_sql("regOrig", conn, if_exists="replace", index=False)
     df_cfopentsai.to_sql("cfopEntSai", conn, if_exists="replace", index=False)
 
-    print(" ➔ Criando Views no banco OSF...")
+    vc.log("Criando Views no banco OSF...", level="INFO")
     SQL_VIEWS = """
     DROP VIEW IF EXISTS osf.EfdC100_EfdC100Detalhe_Efd0150;
     CREATE VIEW IF NOT EXISTS osf.EfdC100_EfdC100Detalhe_Efd0150 AS
@@ -89,7 +94,7 @@ def construir_banco_sia(db_osf, db_sia, excel_file):
     """
     cursor.executescript(SQL_VIEWS)
 
-    print("Executando DDLs e montando tabelas auxiliares...")
+    vc.log("Executando DDLs e montando tabelas auxiliares...", level="INFO")
     
     # Todos os comandos SQL extraídos do cookbook de construção do SIA
     sql_script = """
@@ -613,7 +618,7 @@ def construir_banco_sia(db_osf, db_sia, excel_file):
     
     cursor.executescript(sql_script)
 
-    print(" ➔ Criando Índices Complementares (Aceleração)...")
+    vc.log("Criando Índices Complementares (Aceleração)...", level="INFO")
     SQL_INDEXES = """
     CREATE INDEX IF NOT EXISTS osf.idx_EfdC100_idEfd0150 ON dfe_fiscal_EfdC100(idEfd0150);
     CREATE INDEX IF NOT EXISTS osf.idx_EfdC100_idEfdC100 ON dfe_fiscal_EfdC100(idEfdC100);

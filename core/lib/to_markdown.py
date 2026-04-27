@@ -1,16 +1,19 @@
 """
+core/lib/to_markdown.py
+
 [SUB-ROTINA] MARKDOWN EXPORTER
 Gera tabelas MD ricas a partir de um cursor SQLite.
-Também faz log de execução em query_history.sqlite, que fica na pasta ../_dbs ou, se não existir, na mesma pasta de out_path
+Também faz log de execução em query_history.sqlite.
 Otimizado para memória: Não carrega tudo na RAM para alinhar pipes.
 """
-import argparse
 import sqlite3
-import sys
 from datetime import datetime
 from pathlib import Path
 from decimal import Decimal
 from typing import Any, Optional
+
+# IMPORTANTE: Importando a biblioteca central do VC
+import core.lib.vccore as vc
 
 def _registrar_historico_sql(out_path: str, sql_query: str, db_path: str, attachments: str, title: str, sql_file: str, row_count: int):
     """
@@ -66,8 +69,8 @@ def _registrar_historico_sql(out_path: str, sql_query: str, db_path: str, attach
         conn.close()
     except Exception as e:
         # Silencioso para não interromper a geração do relatório, 
-        # apenas avisa no terminal
-        print(f"  ⚠️ Aviso: Não foi possível registrar o histórico SQL: {e}")
+        # apenas avisa no terminal usando o padrao de log do vccore
+        vc.log(f"Não foi possível registrar o histórico SQL: {e}", level="WARNING")
 
 
 def fmt_br(val: Any) -> str:
@@ -111,7 +114,7 @@ def export_markdown(
     title: Optional[str] = None,
     sql_file: str = "",
     mode: str = "w",  # Permite alternar entre escrever ('w') e adicionar ('a')
-    show_meta: bool = False  # <--- NOVO PARÂMETRO
+    show_meta: bool = False  
 ) -> None:
     """
     Gera Markdown streamando o cursor.
@@ -125,7 +128,7 @@ def export_markdown(
         if title:
             f.write(f"## {title}\n\n")
 
-        # --- BLOCO METADADOS & SQL (AGORA CONDICIONAL) ---
+        # --- BLOCO METADADOS & SQL ---
         if show_meta:
             f.write('<details>\n  <summary><span style="font-size:0.9em; color:gray; cursor:pointer">🔍 Detalhes da Execução e Query SQL</span></summary>\n\n')
             data_hora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -158,7 +161,7 @@ def export_markdown(
                 separators.append("---:" if is_num else ":---")
             f.write("| " + " | ".join(separators) + " |\n")
 
-            # 3. Write First Row (agora temos certeza que first_row existe)
+            # 3. Write First Row
             f.write("| " + " | ".join(fmt_br(c) for c in first_row) + " |\n")
             row_count += 1
 
@@ -167,7 +170,7 @@ def export_markdown(
                 f.write("| " + " | ".join(fmt_br(c) for c in row) + " |\n")
                 row_count += 1
 
-            # --- RODAPÉ MINIMALISTA (AGORA CONDICIONAL) ---
+            # --- RODAPÉ MINIMALISTA ---
             if show_meta:
                 f.write(f"\n> 📊 **Total de Registros:** {row_count}\n\n")
 
@@ -181,49 +184,3 @@ def export_markdown(
             sql_file=sql_file,
             row_count=row_count
         )
-
-# --- MODO STANDALONE ---
-def main():
-    parser = argparse.ArgumentParser(description="Exportador Standalone de SQLite para Markdown")
-    parser.add_argument("--db", required=True, help="Caminho do banco de dados")
-    parser.add_argument("--sql", required=True, help="Query SQL ou caminho para arquivo .sql")
-    parser.add_argument("--out", required=True, help="Caminho do arquivo de saída .md")
-    parser.add_argument("--title", default="", help="Título do relatório")
-    parser.add_argument("--debug", action="store_true", help="Se definido, exibe metadados e SQL no topo") # NOVO
-    args = parser.parse_args()
-
-    try:
-        sql_file_name = ""
-        sql_content = args.sql
-        sql_path = Path(args.sql)
-        
-        # Verifica se o que foi passado no --sql é um arquivo ou a query direta
-        if sql_path.exists() and sql_path.is_file():
-            sql_file_name = sql_path.name
-            sql_content = sql_path.read_text(encoding="utf-8")
-
-        conn = sqlite3.connect(args.db)
-        cursor = conn.cursor()
-        
-        # Executa a query
-        cursor.execute(sql_content)
-        
-        # Chama a exportação passando o estado do debug (show_meta)
-        export_markdown(
-            cursor=cursor, 
-            out_path=args.out, 
-            sql_query=sql_content, 
-            db_path=args.db,
-            sql_file=sql_file_name,
-            title=args.title,
-            show_meta=args.debug # AGORA REPASSANDO O PARAMETRO
-        )
-        
-        conn.close()
-        print(f"✅ Relatório gerado com sucesso em: {args.out}")
-        
-    except Exception as e:
-        print(f"❌ Erro ao gerar relatório standalone: {e}")
-
-if __name__ == "__main__":
-    main()

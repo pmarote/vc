@@ -1,6 +1,6 @@
 ---
 name: vc
-version: "0.4.9"
+version: "0.5.0"
 type: monorepo
 stack: python, sqlite, uv, markdown, html
 os: windows, linux
@@ -32,7 +32,7 @@ Para detalhes completos, leia o [README.md](README.md).
 
 | Pasta | Função | SO |
 |---|---|---|
-| `core/` | Central de Comando (FastAPI, Launchpad, Terminal Web, Editor Monaco e Scripts base) | Linux/Win |
+| `core/` | Central de Comando (FastAPI, Launchpad, Terminal Web, Bibliotecas Globais e Scripts base) | Linux/Win |
 | `sfia_safic/` | Workspace setup, Build SIA, Relatórios e Compilador de Templates | Linux/Win |
 | `sfia_credAcCust/` | Relatórios e-CredAc Custeio (PowerBI → SQLite) | Linux/Win |
 | `importador_safic/` | ETL: MDF/SQL Server → SQLite OSF (com merge dinâmico) | **MDF Win Only** |
@@ -44,19 +44,21 @@ Para detalhes completos, leia o [README.md](README.md).
 ## Regras de ouro (para a IA)
 
 **Fazer:**
-- **a única forma de iniciar o VC é através de `terminal.bat`**
-- Usar `uv run` sempre, nunca `python` direto
-- Cada microapp é editado de forma isolada
+- **A forma primária de iniciar o VC é através de `terminal.bat`**.
+- O `terminal.bat` delega a autoconfiguração ao `core/Scripts/vc_env.bat`, que calcula o `VC_ROOT` dinamicamente (sem barra no final) e injeta o `PYTHONPATH`.
+- Ferramentas são acionadas através de scripts `.bat` em `core/Scripts`. O Launchpad Web lista esses scripts automaticamente lendo os marcadores de Frontmatter `:: DESC:` e `:: ARGS:` no topo dos arquivos `.bat`.
+- O script `vc.bat` orquestra as chamadas executando `uv run --directory "%VC_ROOT%\%MICROAPP%" %*`. O uso de `%*` combinado com laços internos garante que infinitos parâmetros possam ser passados, onde `%MICROAPP%` é a pasta do projeto desejada, que chamaremos de microapp, que é executado de forma isolada, cada uma delas com seu `pyproject.toml`, `.venv` e `uv.lock`.
 - O contexto atual do sistema é sempre guiado pelo arquivo `var/sfia_config.toml` (o CLI lida com isso sozinho).
-- Arquivos temporários e logs gravados em `var/` (ignorada pelo git)
-- Templates: O motor de templates (template_engine.py) usa a arquitetura Lexical/Linear (Passada única de cima para baixo). O estado das variáveis se mantém no documento. A definição conceitual completa dos templates está na pasta raiz, em [SFIA_TMPL_SPEC.md](SFIA_TMPL_SPEC.md).
+- Arquivos temporários e logs gravados em `var/` (ignorada pelo git).
+- Templates: O motor de templates (`template_engine.py`) usa a arquitetura Lexical/Linear (Passada única de cima para baixo). O estado das variáveis se mantém no documento. A definição conceitual completa dos templates está na pasta raiz, em [SFIA_TMPL_SPEC.md](SFIA_TMPL_SPEC.md).
 - Manter o isolamento: alterações num microapp não devem afetar o `pyproject.toml` de outro.
-- Imports entre módulos do mesmo microapp usam caminhos relativos simples
-- **Estrutura de Templates e Temporários**: Os arquivos fontes dos templates devem ficar na pasta `_tmpl/`. Arquivos temporários ad-hoc do sistema devem ir para `var/temp/`.
-- **Arquitetura Core**: Funções e utilitários que não dependam de bibliotecas externas pesadas e que servem a múltiplos microapps devem ser adicionadas em `core/lib/vccore.py`. Scripts `.bat` utilitários globais devem ir para `core/Scripts/`.
+- **Arquitetura Core:** Funções vitais transversais devem ser isoladas em `core/lib/vccore.py` (caminhos, logs) e `core/lib/to_markdown.py`.
+- Os microapps devem importar as bibliotecas centrais de forma limpa, utilizando *namespaces* explícitos (Ex: `import core.lib.vccore as vc` ou `import core.lib.to_markdown as vctm`).
 
 **Não fazer:**
-- Não criar `config.toml` na raiz (foi removido intencionalmente)
+- Não usar gambiarras como `sys.path.insert()` para importar módulos. Confie no `PYTHONPATH` injetado pelo sistema.
+- Não usar `print()` genéricos para outputs do sistema. Sempre importar e utilizar o `vc.log(mensagem, level="INFO")` para garantir a padronização de cores e alertas ANSI no terminal.
+- Não criar `config.toml` na raiz (foi removido intencionalmente).
 - Não sugerir instalação global de pacotes (`pip install`). Sempre modificar o `pyproject.toml` e usar `uv add`.
 
 ---
@@ -64,7 +66,7 @@ Para detalhes completos, leia o [README.md](README.md).
 ## Entrypoint rápido (exemplo para Windows)
 
 ```bat
-terminal.bat          # abre o terminal com os doskeys configurados
-vc sfia_safic main.py report --dir ../var
-exp --db var/sia.sqlite --sql query.sql --out resultado.xlsx
+terminal.bat                      # abre o terminal com ambiente hidratado
+vc sfia_safic main.py report      # utiliza contexto do TOML ativo
+vc utils sqlite2md.py --db var/sia.sqlite --sql query.sql --out relatorio.md
 ```

@@ -1,6 +1,8 @@
 """
 sfia_safic/template_engine.py
 Motor de compilação do Literate Document (*.tmpl.md) - SFIA_TMPL_SPEC v0.3
+
+Refatorado para utilizar as bibliotecas centrais do VC.
 """
 import re
 import sqlite3
@@ -11,9 +13,9 @@ import os
 import tempfile
 from pathlib import Path
 
-# Reutilizando a infraestrutura oficial do VC
-from to_markdown import fmt_br
-from reports._helpers import executar_e_formatar, set_debug
+# IMPORTANTE: Importando as bibliotecas centrais
+import core.lib.vccore as vc
+import core.lib.to_markdown as vctm
 
 class SfiaHelper:
     """Classe utilitária injetada no namespace como 'sfia'"""
@@ -49,7 +51,6 @@ class TemplateCompiler:
         self.dbs_dir = self.work_dir / "_dbs"
         self.mds_dir = self.work_dir / "_mds"
         self.debug = debug
-        set_debug(debug)
         
         self.namespace = {}
         self.conn = None
@@ -97,7 +98,7 @@ class TemplateCompiler:
         # 1. Isolar Frontmatter YAML
         fm_match = re.match(r"^---\n(.*?)\n---\n(.*)", content, re.DOTALL)
         if not fm_match:
-            print(f"  [Ignorado] {self.tmpl_path.name}: Sem frontmatter (---) válido.")
+            vc.log(f"[{self.tmpl_path.name}] Ignorado: Sem frontmatter (---) válido.", level="WARNING")
             return None
         
         fm_text, body = fm_match.groups()
@@ -105,7 +106,7 @@ class TemplateCompiler:
         try:
             fm = yaml.safe_load(fm_text)
         except yaml.YAMLError as e:
-            print(f"  [Erro YAML] {self.tmpl_path.name}: {e}")
+            vc.log(f"[{self.tmpl_path.name}] Erro YAML: {e}", level="ERROR")
             return None
 
         if fm.get("type") != "sfia-template":
@@ -114,12 +115,12 @@ class TemplateCompiler:
         # 2. Conexões e Preparação
         main_db_name = fm.get("main_db")
         if not main_db_name:
-            print(f"  [Erro] 'main_db' ausente no frontmatter de {self.tmpl_path.name}.")
+            vc.log(f"[{self.tmpl_path.name}] 'main_db' ausente no frontmatter.", level="ERROR")
             return None
 
         main_db_path = self.dbs_dir / main_db_name
         if not main_db_path.exists():
-            print(f"  [Erro] Banco principal '{main_db_path.name}' não localizado.")
+            vc.log(f"Banco principal '{main_db_path.name}' não localizado.", level="ERROR")
             return None
 
         self.conn = sqlite3.connect(main_db_path)
@@ -132,7 +133,7 @@ class TemplateCompiler:
                 if attach_path.exists():
                     self.cursor.execute(f"ATTACH DATABASE '{attach_path}' AS {alias}")
                 else:
-                    print(f"  [Aviso] Banco de attach '{db_filename}' não encontrado.")
+                    vc.log(f"Banco de attach '{db_filename}' não encontrado.", level="WARNING")
 
         # Construindo Namespace
         self.namespace = {
@@ -141,7 +142,6 @@ class TemplateCompiler:
         for k, v in fm.items():
             self.namespace[k] = v  # Injeção nativa
             # print(f"[DEBUG]injetando item do YAMLfm '{v}' no campo '{k}' de self.namespace")  # debug
-
 
         # 3. Processamento em Fluxo (Parser Linear Top-to-Bottom)
         output_parts = []
@@ -186,11 +186,18 @@ class TemplateCompiler:
                 # Resolução do Gargalo de Gravação (In-Memory para File e de volta para In-Memory)
                 # Criamos um arquivo temporário seguro (mkstemp não entra em conflito de lock no Windows)
                 tmp_fd, tmp_path = tempfile.mkstemp(suffix=".md", text=True)
-                os.close(tmp_fd) # Fecha o descritor para que o VC possa abrí-lo livremente
+                os.close(tmp_fd)  # Fecha o descritor para que o VC possa abrí-lo livremente
                 
                 try:
-                    # Chama o helper oficial do VC, que gravará as tabelas no tmp_path
-                    executar_e_formatar(query, self.cursor, tmp_path, title="")
+                    # Chama o core.lib.to_markdown DIRETAMENTE (Desacoplamento total de reports._helpers)
+                    vctm.export_markdown(
+                        cursor=self.cursor,
+                        out_path=tmp_path,
+                        sql_query=query,
+                        title="",
+                        mode="w",
+                        show_meta=self.debug
+                    )
                     
                     # Lê o resultado recém-formatado e devolve para a nossa pipeline de memória
                     with open(tmp_path, 'r', encoding='utf-8') as f:
@@ -221,7 +228,7 @@ class TemplateCompiler:
         final_content = f"---\n{fm_text}\n---\n" + "".join(output_parts)
         out_path.write_text(final_content, encoding="utf-8")
         
-        print(f"  [OK] Artefato gerado: {self.mds_dir}\\{out_filename}")
+        vc.log(f"Artefato gerado: {self.mds_dir.name}/{out_filename}", level="INFO")
         return out_path
 
 
@@ -232,11 +239,11 @@ def compilar_todos_templates(work_dir: Path, debug: bool = False):
     templates = list(work_dir.glob("*.tmpl.md"))
     
     if not templates:
-        print("  Nenhum template *.tmpl.md encontrado na pasta de trabalho.")
+        vc.log("Nenhum template *.tmpl.md encontrado na pasta de trabalho.", level="WARNING")
         return
 
-    print(f"🚀 Compilando {len(templates)} templates dinâmicos (Spec v0.3)...")
+    vc.log(f"Compilando {len(templates)} templates dinâmicos (Spec v0.3)...", level="INFO")
     for tmpl in templates:
         compiler = TemplateCompiler(tmpl, work_dir, debug)
-        print(f"[INFO] Compilando agora template {tmpl}")
+        vc.log(f"Compilando agora template: {tmpl.name}", level="INFO")
         compiler.compile()

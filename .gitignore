@@ -8,7 +8,7 @@
 **/.ipynb_checkpoints/
 
 # === Gestão de Pacotes - a ideia é sempre manter as pastas "limpas" ===
-# === 0.4.6+ - a regra é sempre recriar .venv do zero (não versionar o lock) ===
+# === a regra é sempre recriar .venv do zero (não versionar o lock) ===
 **/uv.lock
 
 # === Dados e Bancos de Dados ===

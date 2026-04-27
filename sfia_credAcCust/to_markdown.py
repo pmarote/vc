@@ -1,5 +1,5 @@
 """
-[SUB-ROTINA] MARKDOWN EXPORTER (v0.4.1)
+[SUB-ROTINA] MARKDOWN EXPORTER
 Gera tabelas MD ricas a partir de um cursor SQLite.
 Otimizado para memória: Não carrega tudo na RAM para alinhar pipes.
 """

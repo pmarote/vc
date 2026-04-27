@@ -2,7 +2,6 @@ import argparse
 import sys
 import webbrowser
 import os
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -78,36 +77,49 @@ def show_welcome():
         print(" Providencie a cópia desta pasta 'usr'. Copie a pasta inteira e cole-a")
         print(f" exatamente no seguinte caminho: {vc.Colors.YELLOW}{vc.Colors.BOLD}{vc.USR_DIR}{vc.Colors.RESET}")
 
+
     print(f"{vc.Colors.CYAN}{'='*70}{vc.Colors.RESET}")
     print(f" {vc.Colors.BOLD}Comandos de Atalho:{vc.Colors.RESET}")
     vc.log("vc [app] [cmd]  - Executa ferramentas (ex: vc core main.py -h)")
     vc.log("vcdir           - Lista microapps disponíveis")
     vc.log("vcclean         - Limpa ambientes e caches")
-    vc.log("vcclean         - Limpa ambientes e caches")
-    vc.log("vcw (vc core main.py serve)     - Inicia o servidor web local")
-    vc.log("vcew (vc core main.py --work)   - Abre Explorer no WorkDir")
-    vc.log("vcer (vc core main.py  --root)  - Abre Explorer na Raiz")
+    vc.log("vcw (vc core main.py serve)     - Inicia o servidor web local")
+    vc.log("vcew (vc core main.py --work)   - Abre Explorer no WorkDir")
+    vc.log("vcer (vc core main.py --root)   - Abre Explorer na Raiz")
     vc.log("vcmd (vc core main.py --viewer) - Abre Visualizador MD")
     print(f"{vc.Colors.CYAN}{'='*70}{vc.Colors.RESET}")
 
 def open_path(path_type):
+    """Gerencia a abertura de diretórios e arquivos locais no SO."""
     work_dir = vc.get_work_dir()
+    
     if path_type == 'work' and work_dir:
         os.startfile(work_dir) if os.name == 'nt' else subprocess.run(['open', work_dir])
+    
     elif path_type == 'root':
         os.startfile(vc.ROOT_DIR) if os.name == 'nt' else subprocess.run(['open', vc.ROOT_DIR])
+    
+    elif path_type == 'viewer':
+        # Localiza o arquivo HTML do visualizador na pasta core
+        viewer_path = vc.CORE_DIR / "md-viewer-pm.html"
+        if viewer_path.exists():
+            vc.log(f"Abrindo Visualizador MD: {viewer_path.name}")
+            # Abre o arquivo local no navegador padrão como uma URI file:///
+            webbrowser.open(viewer_path.as_uri())
+        else:
+            vc.log(f"Erro: Arquivo {viewer_path.name} não encontrado em {vc.CORE_DIR}", level="ERROR")
 
 def main():
     parser = argparse.ArgumentParser(description="🚀 VC Core - Orquestrador Central")
     
-    # Flags de utilidade (Antigo vc_manager)
+    # Flags de utilidade
     parser.add_argument('--welcome', action='store_true', help='Banner de status')
     parser.add_argument('-w', '--work', action='store_true', help='Abre Explorer no WorkDir')
     parser.add_argument('-r', '--root', action='store_true', help='Abre Explorer na Raiz')
     parser.add_argument('-v', '--viewer', action='store_true', help='Abre Visualizador MD')
     parser.add_argument('--clean', action='store_true', help='Limpa venvs e caches')
 
-    # Subcomando 'serve' (Antigo main.py do sfiaweb)
+    # Subcomando 'serve'
     subparsers = parser.add_subparsers(dest="command")
     serve_parser = subparsers.add_parser("serve", help="Inicia o servidor web local")
     serve_parser.add_argument("--port", type=int, default=5678)
@@ -120,9 +132,12 @@ def main():
         open_path('work')
     elif args.root:
         open_path('root')
+    elif args.viewer:
+        # Implementação correta para abrir o browser no endereço local
+        open_path('viewer')
     elif args.clean:
         vc.log("Iniciando limpeza...", level="WARNING")
-        # Lógica de limpeza simplificada aqui ou chamada externa
+        # Chamar lógica do vcclean.bat ou script interno
     elif args.command == "serve":
         work_dir = vc.get_work_dir()
         if not work_dir:
@@ -131,7 +146,7 @@ def main():
         
         from server import start_server
         url = f"http://127.0.0.1:{args.port}/"
-        vc.log(f"Abrindo Launchpad: {url}", level="INFO")
+        vc.log(f"Abrindo VC Launchpad: {url}", level="INFO")
         webbrowser.open(url)
         start_server(port=args.port, work_dir_path=str(work_dir))
     else:

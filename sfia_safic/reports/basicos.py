@@ -4,7 +4,7 @@ Relatório de Dados Básicos — GIAs, SPEDs, Conta Fiscal, etc.
 from ._helpers import executar_e_formatar, iniciar_relatorio
 
 
-def gerar_rel_basicos(cursor, out_path, num_osf, debug=False):
+def gerar_rel_basicos(cursor, out_path, debug=False):
     iniciar_relatorio(out_path, "Relatório de Dados Básicos", debug=debug)
     where = "1 = 1"
 
@@ -21,10 +21,10 @@ def gerar_rel_basicos(cursor, out_path, num_osf, debug=False):
     executar_e_formatar("SELECT A.* FROM _fiscal_historicodeie AS A;", cursor, out_path, "Historico:")
     executar_e_formatar("SELECT A.* FROM _dbo_Versao AS A;", cursor, out_path, "Versão do dbo:")
 
-    executar_e_formatar(f"""
-        SELECT A.numOsf, A.dataDeCriacao, A.loginUsuario, A.cnpj, A.ie, A.razao, A.formaDeAcionamento
-        FROM _dbo_auditoria AS A WHERE numOsf = {num_osf};
-    """, cursor, out_path, "Dados da Auditoria:")
+#    executar_e_formatar(f"""
+#        SELECT A.numOsf, A.dataDeCriacao, A.loginUsuario, A.cnpj, A.ie, A.razao, A.formaDeAcionamento
+#        FROM _dbo_auditoria AS A WHERE numOsf = {num_osf};
+#    """, cursor, out_path, "Dados da Auditoria:")
 
     executar_e_formatar("""
         SELECT 'ArqsEFDs' AS tipo, count(idEfd0000) AS Qtd, min(DT_INI) AS min_DT_INI, max(DT_FIN) AS max_DT_FIN, NOME, CNPJ, IE FROM _fiscal_EFD0000 AS A

@@ -3,8 +3,37 @@
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 
-## [0.5.0] - 2026-04
+## [0.5.1] - 2026-04
 - versão em desenvolvimento
+
+## [0.5.0] - 2026-04
+
+Esta versão consolida a arquitetura do ecossistema VC, centralizando a inteligência em bibliotecas globais, desacoplando módulos e transformando o terminal e o Launchpad em ferramentas dinâmicas de altíssima produtividade.
+
+### 🧠 Arquitetura VC Core & Bibliotecas Globais
+- **Consolidação do `vccore.py`**: Estabelecido como a "Single Source of Truth" (Fonte Única de Verdade). Agora centraliza a descoberta de caminhos (`VC_ROOT`, `VAR_DIR`), o sistema de cores ANSI e o padronizador de logs `vc.log()`, substituindo `print()` em todo o sistema.
+- **Desacoplamento do Exportador Markdown**: O antigo `to_markdown.py` foi extraído do `sfia_safic`, purificado de sua lógica de CLI e promovido a biblioteca central em `core/lib/to_markdown.py`. 
+- **Fim do `sys.path.insert`**: Com a configuração correta do `PYTHONPATH` gerida pelo `vc_env.bat`, os microapps agora importam as bibliotecas nativamente (ex: `import core.lib.vccore as vc`), eliminando hacks de rotas e melhorando a segurança.
+
+### 💻 CLI, Terminal e Scripts (`core/Scripts`)
+- **Autolocalização de Ambiente**: O `vc_env.bat` foi reescrito para descobrir o `VC_ROOT` dinamicamente subindo na árvore de diretórios, resolvendo caminhos absolutos de forma limpa (sem barra no final), o que evita erros de *dupla barra* (`\\`) no Windows.
+- **`vc.bat` Sem Limites**: O script de execução principal foi reescrito utilizando laços de repetição (`shift` com `goto:loop`), quebrando a limitação histórica de 9 parâmetros do DOS e permitindo a passagem de infinitos argumentos com preservação de aspas.
+- **Otimização do `vcclean.bat`**: Refatorado para ler o caminho base de forma segura, limpando instantaneamente pastas `__pycache__`, `.venv` e arquivos `uv.lock`.
+
+### 🚀 Launchpad Web (Front-end e Hub)
+- **Painel de Ferramentas Dinâmico**: O Launchpad (`index.html`) agora lê a pasta `core/Scripts` e converte automaticamente os scripts `.bat` em botões clicáveis.
+- **Frontmatter em `.bat`**: Scripts do sistema agora suportam metadados como `:: DESC:` (Descrição) e `:: ARGS:` (Argumentos esperados). Se um script exigir argumentos, o Launchpad renderiza um campo de texto interativo (*input*) dentro do card da ferramenta.
+- **Janelas Inteligentes**: Ao executar uma ferramenta pelo Launchpad, o servidor abre um novo console do Windows, hidrata o ambiente (`vc_env.bat`), executa a ação e introduz um `timeout` (30s) elegante com mensagem personalizada antes de fechar a janela, permitindo a leitura de logs.
+
+### 📊 Microapp `sfia_safic` e Utilities
+- **Tela de Ajuda Didática (`-h`)**: O `main.py` do Safic agora intercepta o comando `-h` antes do `argparse`, entregando uma interface colorida, didática e contextualizada, avisando se há um workspace ativo e explicando os fluxos com regras de ouro.
+- **Independência do Motor de Templates**: O `template_engine.py` foi refatorado para importar o `vctm.export_markdown` diretamente da biblioteca central, cortando totalmente sua dependência estrutural da pasta de relatórios.
+- **Novo Utilitário `sqlite2md.py`**: O modo standalone do conversor de Markdown renasceu como uma ferramenta independente na pasta `utils/`, consumindo a biblioteca central de forma limpa.
+
+
+## [0.4.9] - 2026-04
+Esta versão representa um salto significativo na consolidação arquitetural do projeto como um Ecossistema, transformando o antigo `sfiaweb` num `core` unificado e trazendo o poder da interface de linha de comando nativamente para a Web.
+*(... restante do changelog mantido intacto ...)*
 
 ## [0.4.9] - 2026-04
 Esta versão representa um salto significativo na consolidação arquitetural do projeto como um Ecossistema, transformando o antigo `sfiaweb` num `core` unificado e trazendo o poder da interface de linha de comando nativamente para a Web.

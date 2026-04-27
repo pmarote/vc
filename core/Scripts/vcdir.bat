@@ -1,4 +1,5 @@
 @echo off
+:: DESC: Lista Microapps disponíveis
 echo.
 echo 📁 Microapps disponíveis no Workspace VC:
 echo.

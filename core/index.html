@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VC - Hub de Auditoria v0.4.9</title>
+    <title>VC - Launchpad</title>
     <style>
         :root {
             --bg: #f8f9fa;
@@ -20,129 +20,176 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 40px; line-height: 1.6; }
 
-        header { margin-bottom: 40px; display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid var(--border); padding-bottom: 20px; }
-        h1 { font-size: 2.2rem; color: var(--primary); font-weight: 700; }
-        .workdir-info { font-size: 0.9rem; color: var(--text-muted); background: #eee; padding: 5px 12px; border-radius: 20px; margin-top: 10px; display: inline-block; }
-
-        /* GRID DE FERRAMENTAS */
-        .tool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 60px; }
+        /* Cabeçalho */
+        header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 40px; 
+            border-bottom: 2px solid var(--border); 
+            padding-bottom: 20px; 
+        }
+        h1 { font-size: 2.2rem; color: var(--primary); letter-spacing: -1px; }
         
-        .card { 
-            background: var(--surface); 
-            padding: 30px; 
-            border-radius: var(--radius); 
-            box-shadow: var(--shadow); 
-            text-decoration: none; 
-            color: inherit; 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 1px solid transparent;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
+        .header-right { display: flex; align-items: center; gap: 15px; }
+        
+        .workdir-badge {
+            background: #e9ecef;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: var(--primary);
+            font-weight: 500;
+            border: 1px solid var(--border);
+            max-width: 400px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
-        .card:hover { transform: translateY(-8px); box-shadow: 0 12px 20px rgba(0,0,0,0.1); border-color: var(--accent); }
-        .card .icon { font-size: 2.5rem; margin-bottom: 10px; }
-        .card h3 { color: var(--primary); font-size: 1.3rem; }
-        .card p { color: var(--text-muted); font-size: 0.95rem; }
+        /* Layout Principal */
+        main { display: grid; grid-template-columns: 350px 1fr; gap: 40px; }
 
-        /* LISTA DE DOCUMENTOS */
-        .recent-section { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
-        .file-list-container { background: var(--surface); padding: 25px; border-radius: var(--radius); box-shadow: var(--shadow); }
-        .file-list-container h2 { font-size: 1.2rem; margin-bottom: 20px; color: var(--primary); border-left: 4px solid var(--accent); padding-left: 15px; }
-        
+        /* Seções e Paineis */
+        .panel-section { background: var(--surface); border-radius: var(--radius); padding: 25px; border: 1px solid var(--border); box-shadow: var(--shadow); margin-bottom: 30px; }
+        h2 { font-size: 1.1rem; margin-bottom: 20px; color: var(--primary); display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+
+        /* Listas laterais */
         ul { list-style: none; }
-        li { padding: 10px 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
-        li:last-child { border: none; }
-        .file-link { text-decoration: none; color: var(--accent); font-weight: 500; font-size: 0.95rem; transition: opacity 0.2s; }
-        .file-link:hover { opacity: 0.7; }
-        .file-tag { font-size: 0.75rem; color: #999; background: #f8f9fa; padding: 2px 8px; border-radius: 4px; }
+        li { padding: 12px; border-bottom: 1px solid #f1f1f1; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; }
+        li:hover { background: #fcfcfc; }
+        .file-link { text-decoration: none; color: var(--text); font-weight: 500; flex: 1; margin-right: 10px; }
+        .file-link:hover { color: var(--accent); }
+        .file-tag { font-size: 0.7rem; font-weight: bold; background: #eee; padding: 2px 6px; border-radius: 4px; color: #666; }
 
-        .btn-shutdown { margin-top: 60px; background: none; border: 1px solid #ff4d4d; color: #ff4d4d; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
-        .btn-shutdown:hover { background: #ff4d4d; color: white; }
+        /* Grade de Ferramentas */
+        .tools-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+        .tool-card { 
+            background: var(--surface); 
+            border: 1px solid var(--border); 
+            border-radius: var(--radius); 
+            padding: 15px; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            display: flex; 
+            flex-direction: column; 
+        }
+        .tool-card:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: var(--shadow); }
+        .tool-name { font-weight: bold; color: var(--primary); margin-bottom: 4px; font-family: 'Consolas', monospace; }
+        .tool-desc { font-size: 0.75rem; color: var(--text-muted); }
+		/* Estilos para o campo de argumentos */
+		.tool-actions {
+		    margin-top: 12px;
+		    display: flex;
+		    gap: 8px;
+		}
+		.tool-input {
+		    flex: 1;
+		    padding: 6px 10px;
+		    border: 1px solid var(--border);
+		    border-radius: 6px;
+		    font-size: 0.8rem;
+		    font-family: 'Consolas', monospace;
+		    background: #fdfdfd;
+		}
+		.tool-input:focus {
+		    outline: none;
+		    border-color: var(--accent);
+		}
+		.btn-run {
+		    background: var(--accent);
+		    color: white;
+		    border: none;
+		    padding: 6px 12px;
+		    border-radius: 6px;
+		    cursor: pointer;
+		    font-weight: bold;
+		    font-size: 0.8rem;
+		    transition: background 0.2s;
+		}
+		.btn-run:hover {
+		    background: #2980b9;
+		}
+		/* Evitar que o card inteiro pule ao clicar dentro do input */
+		.tool-card.has-args {
+		    cursor: default;
+		}
 
-        @media (max-width: 768px) { .recent-section { grid-template-columns: 1fr; } }
+        /* Botões */
+        .btn-shutdown { background: #e74c3c; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .btn-shutdown:hover { background: #c0392b; }
+
+        /* Terminal Iframe */
+        iframe { width: 100%; height: 500px; border: none; border-radius: 8px; background: #000; }
     </style>
 </head>
 <body>
 
     <header>
-	    <div style="display: flex; align-items: center; gap: 15px;">
-	        <img src="/static/pn_i64.png" alt="Logo VC" style="width: 48px; height: 48px;">
-	        <div>
-	            <h1>VC - Launchpad</h1>
-	            <div id="workdir-display" class="workdir-info">Carregando workspace...</div>
-	        </div>
-	    </div>
+        <div class="header-left">
+            <h1>🚀 VC Launchpad</h1>
+        </div>
+        <div class="header-right">
+            <span id="workdir-display" class="workdir-badge">📂 Carregando contexto...</span>
+            <button class="btn-shutdown" onclick="desligarServidor()">Desligar Servidor</button>
+        </div>
     </header>
 
+    <main>
+        <aside>
+            <div class="panel-section">
+                <h2>📝 Templates (_tmpl)</h2>
+                <ul id="list-templates">
+                    <li style="color:#999">Buscando...</li>
+                </ul>
+            </div>
 
+            <div class="panel-section">
+                <h2>📊 Relatórios (_mds)</h2>
+                <ul id="list-reports">
+                    <li style="color:#999">Buscando...</li>
+                </ul>
+            </div>
+        </aside>
 
-    <div class="tool-grid">
-        <a href="/terminal" target="_blank" class="card">
-            <div class="icon">🖥️</div>
-            <h3>Terminal Web</h3>
-            <p>Execute comandos <code>vc</code>, <code>uv run</code> e scripts de auditoria em tempo real.</p>
-        </a>
+        <section>
+            <div class="panel-section">
+                <h2>🛠️ Ferramentas do Sistema</h2>
+                <div id="tools-container" class="tools-grid">
+                    <p style="color:#999">Carregando ferramentas...</p>
+                </div>
+            </div>
 
-        <a href="/editor" target="_blank" class="card">
-            <div class="icon">📝</div>
-            <h3>Editor de Templates</h3>
-            <p>Edite arquivos <code>.tmpl.md</code> em <code>_tmpl/</code> com o motor Monaco.</p>
-        </a>
-
-        <a href="/sql-query" target="_blank" class="card">
-            <div class="icon">🔍</div>
-            <h3>Query SQL Rápida</h3>
-            <p>Exploração ad-hoc dos bancos SQLite com visualização tabular imediata.</p>
-        </a>
-
-        <a href="/explorer" target="_blank" class="card">
-            <div class="icon">📁</div>
-            <h3>Explorador de Arquivos</h3>
-            <p>Navegue pelos relatórios materializados e arquivos Excel de suporte.</p>
-        </a>
-    </div>
-
-    <div class="recent-section">
-        <div class="file-list-container">
-            <h2>Templates Recentes (_tmpl)</h2>
-            <ul id="list-templates">
-                <li style="color:#999">Buscando templates...</li>
-            </ul>
-        </div>
-
-        <div class="file-list-container">
-            <h2>Relatórios Materializados (_mds)</h2>
-            <ul id="list-reports">
-                <li style="color:#999">Buscando relatórios...</li>
-            </ul>
-        </div>
-    </div>
-
-    <button class="btn-shutdown" onclick="desligarServidor()">Desligar Servidor</button>
+            <div class="panel-section">
+                <h2>💻 Terminal Web</h2>
+                <iframe src="/terminal"></iframe>
+            </div>
+        </section>
+    </main>
 
     <script>
-        // Função para carregar os dados do workspace v0.4.9
         async function initHub() {
             try {
-                const res = await fetch('/api/files/list');
-                const data = await res.json();
+                // 1. Busca Informações Gerais
+                const infoRes = await fetch('/api/info');
+                const info = await infoRes.json();
+                document.getElementById('workdir-display').textContent = `📂 ${info.work_dir}`;
 
-                // Atualiza o caminho do WorkDir
-                document.getElementById('workdir-display').textContent = `📂 ${data.work_dir}`;
+                // 2. Busca Listagem de Arquivos
+                const filesRes = await fetch('/api/files/list');
+                const data = await filesRes.json();
 
                 // Popula Templates
                 const tmplList = document.getElementById('list-templates');
                 if (data.templates.length > 0) {
                     tmplList.innerHTML = data.templates.map(file => `
                         <li>
-                            <a href="/editor?file=${file}" target="_blank" class="file-link">${file}</a>
+                            <a href="/editor?file=${file.split('/').pop()}" target="_blank" class="file-link">${file.split('/').pop()}</a>
                             <span class="file-tag">TMPL</span>
                         </li>
                     `).join('');
                 } else {
-                    tmplList.innerHTML = '<li style="color:#ccc">Nenhum template encontrado em _tmpl/</li>';
+                    tmplList.innerHTML = '<li style="color:#ccc">Nenhum template em _tmpl/</li>';
                 }
 
                 // Popula Relatórios
@@ -150,19 +197,82 @@
                 if (data.reports.length > 0) {
                     reportList.innerHTML = data.reports.map(file => `
                         <li>
-                            <a href="/md_viewer?file=${file}" target="_blank" class="file-link">${file}</a>
+                            <a href="/md_viewer?file=${file}" target="_blank" class="file-link">${file.split('/').pop()}</a>
                             <span class="file-tag">MD</span>
                         </li>
                     `).join('');
                 } else {
-                    reportList.innerHTML = '<li style="color:#ccc">Nenhum relatório gerado em _mds/</li>';
+                    reportList.innerHTML = '<li style="color:#ccc">Nenhum relatório em _mds/</li>';
                 }
 
+                // 3. Carrega as Ferramentas (.bat)
+                await loadTools();
+
             } catch (err) {
-                console.error("Erro ao carregar hub:", err);
-                document.getElementById('workdir-display').textContent = "❌ Erro ao conectar com o servidor.";
+                console.error("Erro ao inicializar Launchpad:", err);
+                document.getElementById('workdir-display').textContent = "❌ Erro na conexão.";
             }
         }
+
+		async function loadTools() {
+		    try {
+		        const res = await fetch('/api/tools/list');
+		        const tools = await res.json();
+		        const container = document.getElementById('tools-container');
+		        
+		        if (tools.length > 0) {
+		            container.innerHTML = tools.map(t => {
+		                // Se tiver dica de argumentos, monta um layout com input
+		                if (t.args_hint) {
+		                    return `
+		                        <div class="tool-card has-args">
+		                            <span class="tool-name">${t.name}</span>
+		                            <span class="tool-desc">${t.desc}</span>
+		                            <div class="tool-actions">
+		                                <input type="text" id="arg-${t.name}" class="tool-input" placeholder="${t.args_hint}" onkeydown="if(event.key === 'Enter') runTool('${t.name}')">
+		                                <button class="btn-run" onclick="runTool('${t.name}')">▶</button>
+		                            </div>
+		                        </div>
+		                    `;
+		                } else {
+		                    // Sem argumentos, clique simples no card todo
+		                    return `
+		                        <div class="tool-card" onclick="runTool('${t.name}')">
+		                            <span class="tool-name">${t.name}</span>
+		                            <span class="tool-desc">${t.desc}</span>
+		                        </div>
+		                    `;
+		                }
+		            }).join('');
+		        } else {
+		            container.innerHTML = '<p style="color:#ccc">Nenhuma ferramenta encontrada em core/Scripts</p>';
+		        }
+		    } catch (err) {
+		        console.error("Erro ao carregar ferramentas:", err);
+		    }
+		}
+
+		async function runTool(name) {
+		    try {
+		        // Tenta capturar o valor do input (se ele existir)
+		        const inputEl = document.getElementById(`arg-${name}`);
+		        const argsValue = inputEl ? inputEl.value : "";
+
+		        const res = await fetch(`/api/tools/run/${name}`, { 
+		            method: 'POST',
+		            headers: { 'Content-Type': 'application/json' },
+		            body: JSON.stringify({ args: argsValue })
+		        });
+		        
+		        if (res.ok) {
+		            console.log(`Ferramenta ${name} iniciada com argumentos: '${argsValue}'`);
+		            // Limpa o input após rodar para facilitar uso repetido (opcional)
+		            if(inputEl) inputEl.value = ""; 
+		        }
+		    } catch (err) {
+		        alert("Erro ao executar ferramenta.");
+		    }
+		}
 
         function desligarServidor() {
             if(confirm("Deseja realmente desligar o servidor VC?")) {
@@ -173,7 +283,6 @@
             }
         }
 
-        // Inicializa ao carregar
         window.onload = initHub;
     </script>
 </body>

@@ -2,7 +2,7 @@
 import os
 from pathlib import Path
 
-def gerar_menu_interativo(cursor, out_path: Path, num_osf: str, debug=False):
+def gerar_menu_interativo(cursor, out_path: Path, debug=False):
     """
     Gera um Menu HTML Standalone com área editável para o auditor.
     """
@@ -11,7 +11,7 @@ def gerar_menu_interativo(cursor, out_path: Path, num_osf: str, debug=False):
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Menu de Relatórios - OSF {num_osf}</title>
+    <title>Menu de Relatórios - OSF </title>
     <style>
         body {{ font-family: sans-serif; background: #f4f4f9; color: #333; padding: 10px; margin: auto; }}
         .painel {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }}
@@ -25,7 +25,7 @@ def gerar_menu_interativo(cursor, out_path: Path, num_osf: str, debug=False):
 </head>
 <body>
     <div class="painel">
-        <h1>📑 Menu de Auditoria - OSF {num_osf}</h1>
+        <h1>📑 Menu de Auditoria - OSF </h1>
         <p>Utilize o <strong>VC Reader</strong> (via DOSKEY <code>vcmd</code>) para abrir os relatórios abaixo:</p>
         <ul>
             <li><a href="rel_basicos.md" target="_blank">📄 Relatório de Dados Básicos</a></li>
@@ -40,7 +40,7 @@ def gerar_menu_interativo(cursor, out_path: Path, num_osf: str, debug=False):
 
     <div class="painel">
         <h2>📝 Caderno de Notas do Auditor</h2>
-        Report básico básico para exportador:<br>uv run main.py --db {dir_out_path}\\sia{num_osf}.sqlite --sql "SELECT * FROM chaveNroTudao WHERE ChNrClassifs LIKE '%[12]%' LIMIT 10000" --out F:\\sef\\result\\13009149244_Nakano\\chNrTd_12.xlsx --attach {dir_out_path}\\osf{num_osf}.sqlite osf
+        Report básico básico para exportador:<br>uv run main.py --db {dir_out_path}\\sia.sqlite --sql "SELECT * FROM chaveNroTudao WHERE ChNrClassifs LIKE '%[12]%' LIMIT 10000" --out F:\\sef\\result\\13009149244_Nakano\\chNrTd_12.xlsx --attach {dir_out_path}\\osf.sqlite osf
         <span class="salvar-aviso">⚠️ Dica: Digite suas notas abaixo e aperte <b>Ctrl + S</b> no navegador para salvar este arquivo HTML localmente com as alterações.</span>
         <br>
         <div class="notas" contenteditable="true">

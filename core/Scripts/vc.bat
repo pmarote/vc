@@ -1,4 +1,6 @@
 @echo off
+:: DESC: Executa ferramentas [microappDir] [pythonFile] [args] (ex: vc core main.py -h)
+:: ARGS: [mcapDir] [.py] [args]
 setlocal
 
 :: Verifica se o usuário passou pelo menos o nome do microapp
@@ -10,11 +12,20 @@ if "%~1"=="" (
     exit /b 1
 )
 
-:: Pega o primeiro argumento como o diretório alvo
+:: 1. Pega o primeiro argumento (microapp) e "shifta" para retirá-lo da fila
 set "MICROAPP=%~1"
+shift
 
-:: O uv run executa a partir do VC_ROOT combinando com o microapp.
-:: Passamos do %2 ao %9 para garantir que todos os comandos (como "main.py build --dir var") cheguem lá.
-uv run --directory "%VC_ROOT%\%MICROAPP%" %2 %3 %4 %5 %6 %7 %8 %9
+:: 2. Acumula infinitamente os demais parâmetros em uma única variável
+set "PARAMS="
+:collect_params
+if "%~1"=="" goto execute
+set "PARAMS=%PARAMS% %1"
+shift
+goto collect_params
+
+:execute
+:: 3. O uv run executa a partir do VC_ROOT combinando com o microapp.
+uv run --directory "%VC_ROOT%\%MICROAPP%" %PARAMS%
 
 endlocal

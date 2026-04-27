@@ -222,7 +222,7 @@ SELECT * from _fiscal_Classificacao LIMIT 3;
 * para ajudar a criar LEFT OUTER JOINS
 
 ```bash
-C:\srcP\vc_0.4.7>vc utils mapeador_sqlite.py map -h
+vc utils mapeador_sqlite.py map -h
 usage: mapeador_sqlite.py map [-h] --src SRC [--dst DST]
 
 options:
@@ -230,16 +230,16 @@ options:
   --src SRC   Caminho para o arquivo .sqlite de origem (obrigatório)
   --dst DST   Arquivo .sqlite de destino gerado (padrão: var/mapeamento_chaves.sqlite)
 
-C:\srcP\vc_0.4.7>vc utils mapeador_sqlite.py map --src C:\sef\result\IF\sfia\_estudos\osf.sqlite_all-tables
+vc utils mapeador_sqlite.py map --src C:\sef\result\IF\sfia\_estudos\osf.sqlite_all-tables
 🗄️  Conectando ao banco de entrada: osf.sqlite_all-tables
 💾 Criando/Atualizando banco de saída: mapeamento_chaves.sqlite
  ➔ Extraindo metadados de 1562 tabelas...
  ➔ Calculando cruzamentos de chaves (cid=0 vs cid>0)...
-✅ Processamento finalizado! Banco salvo em: C:\srcP\vc_0.4.7\var\mapeamento_chaves.sqlite
+✅ Processamento finalizado! Banco salvo em: var\mapeamento_chaves.sqlite
 💡 DICA: Você agora pode pesquisar os relacionamentos de uma tabela executando:
    vc utils mapeador_sqlite.py search --table NOME_DA_TABELA
 
-C:\srcP\vc_0.4.7>vc utils mapeador_sqlite.py search --table DocAtrib_fiscal_DocAtributos
+vc utils mapeador_sqlite.py search --table DocAtrib_fiscal_DocAtributos
 🔎 INICIANDO PESQUISA PARA A TABELA: `DocAtrib_fiscal_DocAtributos`
 ============================================================
 O objetivo aqui é descobrir qual é a chave primária (primeiro campo) desta tabela
