@@ -80,6 +80,7 @@ def show_welcome():
 
     print(f"{vc.Colors.CYAN}{'='*70}{vc.Colors.RESET}")
     print(f" {vc.Colors.BOLD}Comandos de Atalho:{vc.Colors.RESET}")
+    vc.log("vcm [app] [cmd] - Executa ferramentas do main.py (ex: vc core -h)")
     vc.log("vc [app] [cmd]  - Executa ferramentas (ex: vc core main.py -h)")
     vc.log("vcdir           - Lista microapps disponíveis")
     vc.log("vcclean         - Limpa ambientes e caches")

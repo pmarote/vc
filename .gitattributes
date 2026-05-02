@@ -1,0 +1,9 @@
+# Padroniza o comportamento geral (opcional, mas recomendado)
+* text=auto
+
+# Força arquivos de script do Windows a SEMPRE usarem CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Força arquivos de script de Linux a SEMPRE usarem LF (boa prática futura)
+*.sh text eol=lf

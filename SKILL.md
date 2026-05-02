@@ -1,6 +1,5 @@
 ---
 name: vc
-version: "0.5.0"
 type: monorepo
 stack: python, sqlite, uv, markdown, html
 os: windows, linux
@@ -16,7 +15,7 @@ Para detalhes completos, leia o [README.md](README.md).
 
 ## O que é
 
-- Automação do ciclo de auditoria fiscal: ingestão de dados brutos → SQLite → Templates Dinâmicos (`*.tmpl.md`) → HTML navegável interativo.
+- Automação do ciclo de auditoria fiscal: ingestão de dados brutos (otimizados para performance) → SQLite → Templates Dinâmicos (`*.tmpl.md`) em Hot-Reload → HTML navegável interativo.
 - Microapps isolados que compartilham apenas uma pasta raiz ("vizinhança").
 - Filosofia **Text-First**: sem GUI complexa acoplada, sem dependências globais, uso intensivo de YAML Frontmatter e Markdown para anotação.
 
@@ -35,7 +34,7 @@ Para detalhes completos, leia o [README.md](README.md).
 | `core/` | Central de Comando (FastAPI, Launchpad, Terminal Web, Bibliotecas Globais e Scripts base) | Linux/Win |
 | `sfia_safic/` | Workspace setup, Build SIA, Relatórios e Compilador de Templates | Linux/Win |
 | `sfia_credAcCust/` | Relatórios e-CredAc Custeio (PowerBI → SQLite) | Linux/Win |
-| `importador_safic/` | ETL: MDF/SQL Server → SQLite OSF (com merge dinâmico) | **MDF Win Only** |
+| `importador_safic/` | ETL: MDF/SQL Server → SQLite OSF (com merge dinâmico inteligente) | **MDF Win Only** |
 | `exportador/` | Query SQLite → Excel / MD / TSV ad-hoc | Linux/Win |
 | `utils/` | Mapeador FK/PK, dump_code, sqlite2md, pmcloud | Linux/Win |
 

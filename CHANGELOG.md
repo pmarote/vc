@@ -2,9 +2,22 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [0.5.2] - 2026-05
+- versão em desenvolvimento
 
 ## [0.5.1] - 2026-04
-- versão em desenvolvimento
+Esta versão foca implacavelmente em **Produtividade Analítica**, introduzindo melhorias profundas no tempo de resposta do compilador de templates, na automação inteligente de *queries* e na segurança de execução do *workspace*.
+
+### ⚙️ Motor de Templates (Literate Documents) e DX (Experiência do Desenvolvedor)
+- **Cache Inteligente por `mtime`:** O compilador `template_engine.py` agora compara a data de modificação (`mtime`) do `*.tmpl.md` na pasta `_tmpl` com o artefato `*.md` final na pasta `_mds`. Ele pula a compilação de templates que não foram alterados, economizando minutos em relatórios pesados.
+- **Auto-Preview no Browser:** Templates recém-compilados agora abrem automaticamente uma nova aba no navegador padrão através da rota `/mds/`, chamando o visualizador nativo (`md_viewer`) de forma instantânea.
+- **Hot-Reload com `vcth`**: Criação do script nativo `vcth.bat` (VC Template Hot-Reload). Um laço infinito elegante (com bloqueio anti `Ctrl+C`) que monitora a pasta de templates a cada 5 segundos e aciona a compilação inteligente (agindo em conjunto com o *Cache Mtime*). Ideal para ser mantido rodando minimizado enquanto o usuário edita o template no seu editor preferido.
+- **Injeção `auto_group` via SQL**: Criação da macro nativa `sfia.auto_group(query_sql)` no `SfiaHelper`. Ela executa uma query protegida (`LIMIT 1`), descobre o tipo primitivo retornado pelo SQLite direto no Python, e gera programaticamente as regras de agregação massiva numéricas (`SUM()`) e textuais (`MAX()`), devolvendo o texto base para injeção e acelerando a escrita de `GROUP BY` em relatórios.
+- **Gargalo de I/O Eliminado**: O exportador global (`to_markdown.py`) ganhou o parâmetro `mode="s"` que, operando com `io.StringIO()`, devolve a string Markdown renderizada inteiramente na memória RAM sem precisar gravar e ler de arquivos temporários (`tempfile.mkstemp`) no disco rígido durante o pipeline dos templates.
+- **Formatação Resiliente (`fmt_br`)**: A função de renderização visual no Markdown foi reajustada usando a lógica *Allowlist*, escapando lixo HTML vindos do banco mas preservando explicitamente *tags* de formatação como `<b>` e `<br>` (suportando tabelas com quebra de linha interna).
+
+### 📊 Importador SAFIC (Otimização de Armazenamento)
+- **Flag `--optimized` (Merge Inteligente):** Nova funcionalidade no `importador_safic` que herda a função de importação expansiva (`--all-tables`), mas agora cria um bloqueio proposital e exclui *hardcoded* tabelas colossais e repetitivas de metadados do SAFIC (`_DocAtributosItemCompleto`, `_DocAtributosDeApuracaoCompleto`, `_DocAtributosEvt`). Isso gerou uma **redução brutal de ~65% do tamanho físico** do banco `.sqlite` consolidado no disco.
 
 ## [0.5.0] - 2026-04
 

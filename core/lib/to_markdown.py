@@ -11,6 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from decimal import Decimal
 from typing import Any, Optional
+import io
 
 # IMPORTANTE: Importando a biblioteca central do VC
 import core.lib.vccore as vc
@@ -107,24 +108,32 @@ def fmt_br(val: Any) -> str:
 
 def export_markdown(
     cursor: sqlite3.Cursor, 
-    out_path: str, 
+    out_path: str = "", 
     sql_query: str = "", 
     db_path: str = "", 
     attachments: str = "", 
     title: Optional[str] = None,
     sql_file: str = "",
-    mode: str = "w",  # Permite alternar entre escrever ('w') e adicionar ('a')
+    mode: str = "w",  # 'w' (write), 'a' (append), 's' (string na memória)
     show_meta: bool = False  
-) -> None:
+) -> Optional[str]:
     """
     Gera Markdown streamando o cursor.
     Nota: O arquivo .md bruto não terá colunas alinhadas visualmente (espaços),
-    mas o render (HTML/GitHub) ficará perfeito. Isso economiza RAM.
+    mas o render (HTML/GitHub) ficará perfeito. Isso economiza RAM/Disco.
     """
     headers = [desc[0] for desc in cursor.description] if cursor.description else []
     first_row = cursor.fetchone()
     
-    with open(out_path, mode, encoding="utf-8") as f:
+    # Define se vai gravar em disco ou manter na memória RAM
+    if mode == "s":
+        f = io.StringIO()
+    else:
+        if out_path:
+            Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+        f = open(out_path, mode, encoding="utf-8")
+
+    try:
         if title:
             f.write(f"## {title}\n\n")
 
@@ -184,3 +193,10 @@ def export_markdown(
             sql_file=sql_file,
             row_count=row_count
         )
+
+        # Se for modo string, extrai o texto da memória e retorna
+        if mode == "s":
+            return f.getvalue()
+
+    finally:
+        f.close() # Libera a memória do StringIO ou fecha o arquivo físico

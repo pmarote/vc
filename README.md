@@ -14,11 +14,11 @@ Transformar bancos SQLite brutos em relatórios consistentes e auditáveis usand
 
 - sfia é um sistema de auditoria.
 - Foi desenvolvido com foco em produtividade, relatórios SQL dinâmicos, anotações de auditoria in-loco (em Markdown e HTML) e automação de cadernos documentais (*Literate Programming* através da sintaxe `SFIA_TMPL_SPEC`).
-- Usa microapps do VC para exploração, consulta rápida, exportação ad-hoc e leitura/anotação de artefatos. Opera sobre o *work_dir* ativo gravado no contexto, dentro dos conceitos sfia, com pasta de trabalho inicializada rigorosamente. As subpastas internas incluem `_dbs` (bancos SQLite e históricos), `_mds` (arquivos markdown materiais e outputs de templates) e `_xls` (arquivos Excel de suporte).
+- Usa microapps do VC para exploração, consulta rápida, exportação ad-hoc e leitura/anotação de artefatos. Opera sobre o *work_dir* ativo gravado no contexto, dentro dos conceitos sfia, com pasta de trabalho inicializada rigorosamente. As subpastas internas incluem `_dbs` (bancos SQLite e históricos), `_tmpl` (templates brutos), `_mds` (arquivos markdown materiais materiais gerados pelo sistema e pelo compilador) e `_xls` (arquivos Excel de suporte).
 
 ## Características do VC
 
-- **Isolamento dos Microapps:** Cada pasta tem o seu próprio ficheiro `pyproject.toml`, assim como cada pasta tem seu próprio `.venv`. Por isso, *utilizamos o `uv` de forma independente dentro de cada pasta*, através de scripts .bat em `core/Scripts`, especialmente `vc.bat`, conforme explicado na seção [Terminal de Trabalho (`terminal.bat`)](#pmtitttb).
+- **Isolamento dos Microapps:** Cada pasta tem o seu próprio arquivo `pyproject.toml`, assim como cada pasta tem seu próprio `.venv`. Por isso, *utilizamos o `uv` de forma independente dentro de cada pasta*, através de scripts .bat em `core/Scripts`, especialmente `vc.bat`, conforme explicado na seção [Terminal de Trabalho (`terminal.bat`)](#pmtitttb).
 
 Historicamente, o projeto **VC** evoluiu de scripts isolados(anteriormente sob nome `sia`) para uma arquitetura enxuta, padronizada com o gerenciador `uv`, utilizando bancos de dados SQLite e renderização Markdown nativa.
 
@@ -106,6 +106,9 @@ Internamente, funciona da seguinte forma:
    mp
    # 8. O último passo é o o processamento de templates textuais de auditoria (*.tmpl.md). Eles sempre estarão em work_dir/_tmpl. Vá editando os templates, verifique as instruções, é um mundo sem fim. Acompanhe essa pasta `sfia` pelo Windows Explorer e vá mudando seus arquivos no que for necessário
    vc sfia_safic main.py template
+   # 9. Para maior produtividade, com o servidor web (vcw) rodando em uma janela, deixe o Hot-Reload rodando em outra janela:
+   vcth
+   # Toda vez que você salvar um arquivo *.tmpl.md na pasta _tmpl, o vcth o compilará e o abrirá automaticamente no seu navegador. Os artefatos finais vão para a pasta _mds.
    ```
 
 ---

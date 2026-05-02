@@ -39,21 +39,75 @@ Trata-se de auditoria da empresa {{ sql: SELECT max(nome) FROM _fiscal_participa
 CNPJ {{ sql: SELECT max(cnpj) FROM _fiscal_participantedeclarado WHERE idParticipanteDeclarado = 1 }},
 cujo período de apuração se inicia em {{ sql: SELECT min(referencia) FROM _imp_ReferenciasSelecionadasNaImportacao }}.
 
-## Valores conforme GIAs (Operação Própria)
+> [!info] rel_basicos
+> A diferença entre GIA e SPED resultou em um **aumento de C65**, a princípio, favorável ao fisco.
+> Praticamente não tem ICMS a pagar, ==estudar o porquê==.
 
-```sql sfia
-SELECT min(aaaamm) || ' a ' || max(aaaamm) AS periodo, sum(c51), sum(c56), sum(sdoOper), sum(c52), sum(c53), sum(c57), sum(c58), sum(sdoNOper), sum(c55), sum(c60), sum(c61), sum(c62), sum(c63), sum(c64), sum(c65), sum(c66)
-FROM
-(WITH UltimaDeclaracao AS ( SELECT cnpj, ie, idTipoDeOperacaoNaGia, dataDeReferencia, MAX(dataDeEntrega) AS dataDeEntrega FROM _fiscal_ApuracaoDeIcmsPelaGia GROUP BY cnpj, ie, idTipoDeOperacaoNaGia, dataDeReferencia ) SELECT SUBSTR(B.dataDeReferencia, 1, 4) || SUBSTR(B.dataDeReferencia, 6, 2) AS aaaamm, B.campo51SaidasComDebito AS c51, B.campo56EntradasComCredito AS c56, ROUND(B.campo51SaidasComDebito - B.campo56EntradasComCredito, 2) AS sdoOper, B.campo52OutrosDebitos AS c52, B.campo53EstornoDeCreditos AS c53, B.campo57OutrosCreditos AS c57, B.campo58EstornoDeDebitos AS c58, ROUND(B.campo52OutrosDebitos + B.campo53EstornoDeCreditos - B.campo57OutrosCreditos - B.campo58EstornoDeDebitos, 2) AS sdoNOper, B.campo55TotalDeDebitos AS c55, B.campo60SubtotalDeCreditos AS c60, B.campo61SaldoCredorDoPeriodoAnterior AS c61, B.campo62TotalDeCreditos AS c62, B.campo63SaldoDevedor AS c63, B.campo64Deducoes AS c64, B.campo65ImpostoARecolher AS c65, B.campo66SaldoCredorATransportar AS c66 FROM UltimaDeclaracao AS sqA LEFT OUTER JOIN _fiscal_ApuracaoDeIcmsPelaGia AS B ON B.cnpj = sqA.cnpj AND B.ie = sqA.ie AND B.idTipoDeOperacaoNaGia = sqA.idTipoDeOperacaoNaGia AND B.dataDeReferencia = sqA.dataDeReferencia AND B.dataDeEntrega = sqA.dataDeEntrega WHERE B.idTipoDeOperacaoNaGia = 0 ORDER BY aaaamm)
-```
 
-### abaixo, com py: sfia.get_history_query() o resultado tem que ser igual ao cima
-
+### Valores conforme GIAs (Operação Própria)
 ```sql sfia
 SELECT min(aaaamm) || ' a ' || max(aaaamm) AS periodo, sum(c51), sum(c56), sum(sdoOper), sum(c52), sum(c53), sum(c57), sum(c58), sum(sdoNOper), sum(c55), sum(c60), sum(c61), sum(c62), sum(c63), sum(c64), sum(c65), sum(c66)
 FROM
 ({{ py: sfia.get_history_query("Valores conforme GIAs (Operação Própria)") }});
 ```
+
+### Resumo de Valores conforme SPEDs (Operação Própria)
+```sql sfia
+SELECT min(aaaamm) || ' a ' || max(aaaamm) AS periodo, sum(c51), sum(c56), sum(sdoOper),
+    sum(c52), sum(c53), sum(c57), sum(c58), sum(sdoNOper),
+    sum(c55), sum(c60), sum(c61), sum(c62), sum(c63), sum(c64), sum(c65), sum(c66), sum(VL_TOT_DED)
+FROM
+({{ py: sfia.get_history_query("Valores conforme SPEDs (Operação Própria)") }});
+```
+
+### Diferenças entre GIAs e EFDs (Operação Própria)
+```sql sfia
+SELECT min(aaaamm) || ' a ' || max(aaaamm) AS periodo, SUM([dif_c51]) AS [Total_dif_c51], SUM([dif_c56]) AS [Total_dif_c56],
+  SUM([dif_sdoOper]) AS [Total_dif_sdoOper],
+  SUM([dif_c52]) AS [Total_dif_c52], SUM([dif_c53]) AS [Total_dif_c53], SUM([dif_c57]) AS [Total_dif_c57], SUM([dif_c58]) AS [Total_dif_c58],
+  SUM([dif_sdoNOper]) AS [Total_dif_sdoNOper],
+  SUM([dif_c55]) AS [Total_dif_c55], SUM([dif_c60]) AS [Total_dif_c60], SUM([dif_c61]) AS [Total_dif_c61],
+  SUM([dif_c62]) AS [Total_dif_c62], SUM([dif_c63]) AS [Total_dif_c63], SUM([dif_c64]) AS [Total_dif_c64], SUM([dif_c65]) AS [Total_dif_c65],
+  SUM([dif_c66]) AS [Total_dif_c66]
+FROM
+({{ py: sfia.get_history_query("Diferenças entre GIAs e EFDs (Operação Própria)") }});
+```
+
+### Conta Fiscal do ICMS
+```sql sfia
+SELECT TpDeclaracao, min(aaaamm) || ' a ' || max(aaaamm) AS periodo, codigo,
+  descricaoDoCredito, descricaoSituacao, TransferenciaSaldo,
+  SUM([valor65]) AS [Total_valor65], SUM([Arrecadado]) AS [Total_Arrecadado], SUM([Vencido]) AS [Total_Vencido],
+  SUM([LanctoEspecial]) AS [Total_LanctoEspecial], SUM([TotArrecadadoVencido]) AS [Total_TotArrecadadoVencido]
+FROM
+({{ py: sfia.get_history_query("Conta Fiscal do ICMS") }})
+GROUP BY TpDeclaracao, codigo, descricaoDoCredito, descricaoSituacao, TransferenciaSaldo;
+```
+
+> [!info] rel_madf
+> Receitas de transportes, ==consumo== de combustíveis, IVA (considerando consumo) de {{ py: f"{round((39.0-26.6)/26.6*100),2}%" }}.
+
+### Madf n1
+```sql sfia
+SELECT *
+FROM
+({{ py: sfia.get_history_query("Madf n1") }})
+```
+
+### Madf n2_1
+```sql sfia
+SELECT *
+FROM
+({{ py: sfia.get_history_query("Madf n2_1") }})
+```
+
+
+```python sfia
+print("Teste de auto_group()")
+print(sfia.auto_group(sfia.get_history_query("Conta Fiscal do ICMS")))
+print("Teste de auto_group()")
+```
+
 
 ## Testes e Modelos
 

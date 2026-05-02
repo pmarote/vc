@@ -2,7 +2,7 @@
 sfia_safic/template_engine.py
 Motor de compilação do Literate Document (*.tmpl.md) - SFIA_TMPL_SPEC v0.3
 
-Refatorado para utilizar as bibliotecas centrais do VC.
+Refatorado para utilizar as bibliotecas centrais do VC, otimização de Cache e Auto-Preview.
 """
 import re
 import sqlite3
@@ -10,8 +10,9 @@ import yaml
 import sys
 import io
 import os
-import tempfile
+import webbrowser
 from pathlib import Path
+from decimal import Decimal
 
 # IMPORTANTE: Importando as bibliotecas centrais
 import core.lib.vccore as vc
@@ -19,8 +20,9 @@ import core.lib.to_markdown as vctm
 
 class SfiaHelper:
     """Classe utilitária injetada no namespace como 'sfia'"""
-    def __init__(self, dbs_dir: Path):
+    def __init__(self, dbs_dir: Path, cursor: sqlite3.Cursor):
         self.dbs_dir = dbs_dir
+        self.cursor = cursor
 
     def get_history_query(self, title: str) -> str:
         """Busca a query mais recente do histórico pelo título."""
@@ -42,6 +44,44 @@ class SfiaHelper:
                 return f"/* /* [Erro]: [Histórico não encontrado: title='{title}'] */ */"
         except Exception as e:
             return f"/* Erro SQLite ao acessar histórico: {e} */"
+
+    def auto_group(self, query: str) -> str:
+        """
+        Executa a query (limitada a 1 linha), analisa o tipo real do dado
+        retornado no Python e gera as funções de agregação SUM ou MAX.
+        """
+        try:
+            # Envolve a query em um LIMIT 1 para garantir execução instantânea, 
+            # mesmo em tabelas com milhões de registros.
+            safe_query = f"SELECT * FROM ({query}) LIMIT 1"
+            self.cursor.execute(safe_query)
+            
+            first_row = self.cursor.fetchone()
+            
+            if not self.cursor.description:
+                return "/* ERRO: A query não retornou colunas válidas. */"
+                
+            headers = [desc[0] for desc in self.cursor.description]
+            
+            if not first_row:
+                return "/* ERRO: A query não retornou dados para inferir os tipos. */"
+                
+            projections = []
+            for i, col_name in enumerate(headers):
+                val = first_row[i]
+                
+                # Inspeção direta do tipo do valor na primeira linha
+                if isinstance(val, (float, int, Decimal)):
+                    # É numérico -> SUM
+                    projections.append(f"    SUM([{col_name}]) AS [Total_{col_name}]")
+                else:
+                    # Não é numérico -> MAX
+                    projections.append(f"    MAX([{col_name}]) AS [{col_name}]")
+                    
+            return ",\n".join(projections)
+            
+        except Exception as e:
+            return f"/* ERRO ao gerar auto_group: {e} */"
 
 
 class TemplateCompiler:
@@ -137,7 +177,7 @@ class TemplateCompiler:
 
         # Construindo Namespace
         self.namespace = {
-            "sfia": SfiaHelper(self.dbs_dir)
+            "sfia": SfiaHelper(self.dbs_dir, self.cursor)
         }
         for k, v in fm.items():
             self.namespace[k] = v  # Injeção nativa
@@ -181,36 +221,23 @@ class TemplateCompiler:
                     
             elif lang == "sql":
                 query = resolved_code.strip()
-                # print(f"[DEBUG]Bloco sql com query = {query}")  # debug
-                
-                # Resolução do Gargalo de Gravação (In-Memory para File e de volta para In-Memory)
-                # Criamos um arquivo temporário seguro (mkstemp não entra em conflito de lock no Windows)
-                tmp_fd, tmp_path = tempfile.mkstemp(suffix=".md", text=True)
-                os.close(tmp_fd)  # Fecha o descritor para que o VC possa abrí-lo livremente
                 
                 try:
-                    # Chama o core.lib.to_markdown DIRETAMENTE (Desacoplamento total de reports._helpers)
-                    vctm.export_markdown(
+                    self.cursor.execute(query)
+                    # Aproveitando o modo "s" para extrair a string direto da RAM
+                    md_table = vctm.export_markdown(
                         cursor=self.cursor,
-                        out_path=tmp_path,
                         sql_query=query,
                         title="",
-                        mode="w",
+                        mode="s",  # <--- Nova opção operando via io.StringIO()
                         show_meta=self.debug
                     )
                     
-                    # Lê o resultado recém-formatado e devolve para a nossa pipeline de memória
-                    with open(tmp_path, 'r', encoding='utf-8') as f:
-                        md_table = f.read()
-                        # print(f"[DEBUG]Sql Query executado: {md_table}")  # debug
+                    if md_table:
+                        output_parts.append(md_table + "\n")
                         
-                    output_parts.append(md_table + "\n")
                 except Exception as e:
                     output_parts.append(f"> ❌ **Erro SQL:** `{e}`\n\n```sql\n{query}\n```\n")
-                finally:
-                    # Garbage Collector implacável do arquivo temporário
-                    if os.path.exists(tmp_path):
-                        os.remove(tmp_path)
             
             pos = end
             
@@ -228,22 +255,60 @@ class TemplateCompiler:
         final_content = f"---\n{fm_text}\n---\n" + "".join(output_parts)
         out_path.write_text(final_content, encoding="utf-8")
         
-        vc.log(f"Artefato gerado: {self.mds_dir.name}/{out_filename}", level="INFO")
         return out_path
 
 
 # --- Interface Pública do Módulo ---
 def compilar_todos_templates(work_dir: Path, debug: bool = False):
-    """Busca e compila Literate Documents (*.tmpl.md) na raiz do workspace."""
+    """Busca e compila Literate Documents (*.tmpl.md) na pasta _tmpl, verificando modificações."""
     work_dir = Path(work_dir)
-    templates = list(work_dir.glob("*.tmpl.md"))
+    tmpl_dir = work_dir / "_tmpl"
+    mds_dir = work_dir / "_mds"
     
-    if not templates:
-        vc.log("Nenhum template *.tmpl.md encontrado na pasta de trabalho.", level="WARNING")
+    # Garante que a pasta _mds existe para receber as saídas
+    mds_dir.mkdir(parents=True, exist_ok=True)
+
+    if not tmpl_dir.exists() or not tmpl_dir.is_dir():
+        vc.log(f"Pasta de templates não encontrada: {tmpl_dir}", level="WARNING")
         return
 
-    vc.log(f"Compilando {len(templates)} templates dinâmicos (Spec v0.3)...", level="INFO")
+    templates = list(tmpl_dir.glob("*.tmpl.md"))
+    
+    if not templates:
+        vc.log(f"Nenhum template *.tmpl.md encontrado em {tmpl_dir}.", level="WARNING")
+        return
+
+    vc.log(f"Processando {len(templates)} templates dinâmicos na pasta '_tmpl'...", level="INFO")
+    
     for tmpl in templates:
-        compiler = TemplateCompiler(tmpl, work_dir, debug)
-        vc.log(f"Compilando agora template: {tmpl.name}", level="INFO")
-        compiler.compile()
+        out_filename = tmpl.name.replace(".tmpl.md", ".md")
+        out_path = mds_dir / out_filename
+        
+        deve_compilar = True
+        
+        # Lógica de verificação por data de modificação
+        if out_path.exists():
+            tmpl_mtime = tmpl.stat().st_mtime
+            out_mtime = out_path.stat().st_mtime
+            
+            # Se o arquivo final (.md) for mais novo ou tiver a mesma idade que o template (.tmpl.md)
+            if out_mtime >= tmpl_mtime:
+                deve_compilar = False
+
+        if deve_compilar:
+            vc.log(f" ⚙️ Compilando: {tmpl.name}", level="INFO")
+            compiler = TemplateCompiler(tmpl, work_dir, debug)
+            compiled_path = compiler.compile()
+            
+            # Se a compilação foi bem-sucedida, abre no navegador
+            if compiled_path:
+                # ATENÇÃO AQUI: Usando a rota pública **'/mds/'** em vez da pasta física **'/_mds/'**
+                # É que, por questões de segurança e conveniência, servidores web modernos
+                # (e frameworks como FastAPI/Flask) costumam tratar pastas que começam
+                # com **_ (underscore) como pastas privadas ou internas**.
+                url = f"http://127.0.0.1:5678/md_viewer?file=/mds/{compiled_path.name}"
+                webbrowser.open(url)
+                vc.log(f" 🌐 Visualização aberta no navegador: {url}", level="INFO")
+                
+        else:
+            vc.log(f" ✅ Não compilado, já há {out_path} atualizado: {tmpl.name}", level="INFO")

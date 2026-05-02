@@ -19,6 +19,8 @@ def main():
     p_merge.add_argument("--src", required=True, help="Pasta contendo os arquivos .db3 ou .sqlite extraídos")
     p_merge.add_argument("--out", required=True, help="Caminho completo do arquivo SQLite final (ex: ../var/osf.sqlite)")
     p_merge.add_argument("--all-tables", action="store_true", help="Importa TODAS as tabelas encontradas aplicando as regras de prefixo dinâmico")
+    # CORREÇÃO AQUI: Uso de %% para que o argparse não confunda com formatação de string
+    p_merge.add_argument("--optimized", action="store_true", help="Importa tudo (all-tables), EXCETO tabelas gigantes de DocAtrib (economia de ~65%% do tamanho do BD final, não trazem dados novos).")
 
     args = parser.parse_args()
 
@@ -36,8 +38,8 @@ def main():
         src_dir = Path(args.src).resolve()
         out_file = Path(args.out).resolve()
         
-        # Repassa a nova flag all_tables
-        merge_safic_databases(out_file, src_dir, all_tables=args.all_tables)
+        # Repassa as flags all_tables e optimized
+        merge_safic_databases(out_file, src_dir, all_tables=args.all_tables, optimized=args.optimized)
 
 if __name__ == "__main__":
     main()

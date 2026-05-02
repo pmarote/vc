@@ -71,7 +71,7 @@ def show_help():
     print(f"  {vc.Colors.GREEN}report_oper{vc.Colors.RESET}  Gera relatórios detalhados com foco em Operações.")
     print(f"  {vc.Colors.GREEN}report_item{vc.Colors.RESET}  Gera relatórios detalhados com foco em Itens.\n")
     
-    print(f"  {vc.Colors.GREEN}template{vc.Colors.RESET}     Processa Literate Documents (*.tmpl.md) salvos na raiz do Workspace.\n")
+    print(f"  {vc.Colors.GREEN}template{vc.Colors.RESET}     Processa Literate Documents (*.tmpl.md) salvos na pasta _tmpl.\n")
 
     print(f" {vc.Colors.BOLD}🔧 FLAGS GLOBAIS:{vc.Colors.RESET}")
     print(f"  {vc.Colors.CYAN}--debug{vc.Colors.RESET}      Exibe as queries SQL e metadados dentro dos relatórios gerados.")

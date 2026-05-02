@@ -148,10 +148,23 @@ MAPA_TABELAS = {
     "fiscal_DocClassificado": "DocAtrib_fiscal_DocClassificado",
 }
 
-def merge_safic_databases(out_db_path: Path, source_dir: Path, all_tables: bool = False):
+# Tabelas muito grandes (resumo de várias outras) que ocupam cerca de 65% do SQLite final
+TABELAS_GIGANTES_DESCARTAVEIS = {
+    "fiscal_DocAtributosItemCompleto",
+    "fiscal_DocAtributosDeApuracaoCompleto",
+    "fiscal_DocAtributosEvt"
+}
+
+def merge_safic_databases(out_db_path: Path, source_dir: Path, all_tables: bool = False, optimized: bool = False):
     print(f"\n🎯 Iniciando Consolidação Safic")
     print(f"📂 Lendo diretório: {source_dir.resolve()}")
-    if all_tables:
+    
+    # Se o usuário escolheu o modo otimizado, ele engloba a ideia de "all_tables", mas com bloqueios
+    if optimized:
+        print(f"⚡ MODO OTIMIZADO ATIVO: Importando todas as tabelas (regra dinâmica), EXCETO tabelas gigantes de _DocAtrib_.")
+        print(f"   (Motivo: Reduz ~65% do tamanho do banco. Estas tabelas são resumos e não possuem dados novos).")
+        all_tables = True 
+    elif all_tables:
         print(f"⚠️ MODO EXPANDIDO: Importando TODAS as tabelas com regras dinâmicas.")
     
     if not source_dir.exists() or not source_dir.is_dir():
@@ -183,6 +196,11 @@ def merge_safic_databases(out_db_path: Path, source_dir: Path, all_tables: bool 
         for tabela_original in tabelas_origem:
             tabela_destino = None
             
+            # Bloqueio imediato se estivermos no modo otimizado e for uma tabela gigante do _DocAtrib_
+            if optimized and tabela_original in TABELAS_GIGANTES_DESCARTAVEIS:
+                print(f"   [!] Ignorando tabela gigante: {tabela_original}")
+                continue
+                
             # 1. Verifica primeiro o override explícito (MAPA_TABELAS)
             if tabela_original in MAPA_TABELAS:
                 tabela_destino = MAPA_TABELAS[tabela_original]
